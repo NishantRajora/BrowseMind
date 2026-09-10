@@ -1,198 +1,229 @@
-import { PageReader } from './page-reader';
-import { escapeHTML, truncateText } from '../shared/utils';
-import { getSettings } from '../shared/storage';
+import { PageReader } from './page-reader.js';
+import { Storage } from '../shared/storage.js';
+import { UserPreferences } from '../shared/types.js';
+import { escapeHTML } from '../shared/utils.js';
 
-class ContentScript {
-  private askAIButton: HTMLElement | null = null;
+class BrowseMindUI {
+  private floatingButton: HTMLButtonElement | null = null;
   private responsePanel: HTMLElement | null = null;
-  private currentSelection: string = '';
+  private shadowRoot: ShadowRoot | null = null;
 
   constructor() {
     this.init();
-    this.injectStyles();
   }
 
-  injectStyles() {
-    const style = document.createElement('style');
-    style.textContent = `
-      .bm-response-panel {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        width: 400px;
-        max-height: 600px;
-        z-index: 10001;
-        border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        font-family: sans-serif;
-        transition: all 0.3s ease;
-      }
-      .bm-theme-light { background: white; color: #333; border: 1px solid #ccc; }
-      .bm-theme-dark { background: #222; color: #eee; border: 1px solid #444; }
-      .bm-panel-header {
-        padding: 10px 16px;
-        background: rgba(0,0,0,0.05);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-weight: bold;
-        border-bottom: 1px solid rgba(0,0,0,0.1);
-      }
-      .bm-theme-dark .bm-panel-header { background: rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.1); }
-      .bm-panel-close {
-        background: none;
-        border: none;
-        font-size: 20px;
-        cursor: pointer;
-        color: inherit;
-      }
-      .bm-panel-content {
-        padding: 16px;
-        overflow-y: auto;
-        line-height: 1.5;
-      }
-      .bm-ask-ai-btn {
-        background: #007bff;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        padding: 4px 8px;
-        font-size: 12px;
-        cursor: pointer;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      }
-      .bm-error { color: #dc3545; font-weight: bold; }
-    `;
-    document.head.appendChild(style);
+  private async init() {
+    this.setupSelectionListener();
+    this.setupMessageListener();
   }
 
-  async init() {
-    document.addEventListener('mouseup', () => this.handleSelection());
-    document.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+  private setupSelectionListener() {
+    document.addEventListener('mouseup', async () => {
+      const selection = window.getSelection();
+      const selectedText = selection?.toString().trim();
 
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      if (message.type === 'EXTRACT_CONTENT') {
-        sendResponse({ content: PageReader.extractReadableContent() });
-      } else if (message.type === 'AI_RESPONSE') {
-        this.showResponsePanel('Thinking...');
-        this.updateResponsePanel(message.data.text, message.data.error);
+      const prefs = await Storage.getPreferences();
+      if (!prefs.enabled || !selectedText) {
+        this.removeFloatingButton();
+        return;
+      }
+
+      this.showFloatingButton(selection);
+    });
+
+    document.addEventListener('mousedown', (e) => {
+      if (this.floatingButton && e.target !== this.floatingButton) {
+        this.removeFloatingButton();
       }
     });
   }
 
-  async handleSelection() {
-    const selection = window.getSelection();
-    const text = selection?.toString().trim();
-
-    if (!text) {
-      this.removeAskAIButton();
-      return;
-    }
-
-    const settings = await getSettings();
-    if (!settings.enabled) return;
-
-    this.currentSelection = text;
-    this.showAskAIButton(selection);
-  }
-
-  handleMouseDown(e: MouseEvent) {
-    if (this.askAIButton && this.askAIButton.contains(e.target as Node)) return;
-    if (this.responsePanel && this.responsePanel.contains(e.target as Node)) return;
-
-    this.removeAskAIButton();
-  }
-
-  showAskAIButton(selection: Selection) {
-    this.removeAskAIButton();
+  private showFloatingButton(selection: Selection) {
+    this.removeFloatingButton();
 
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
 
-    this.askAIButton = document.createElement('button');
-    this.askAIButton.innerText = 'Ask AI';
-    this.askAIButton.className = 'bm-ask-ai-btn';
-    this.askAIButton.style.position = 'fixed';
-    this.askAIButton.style.top = `${rect.top + window.scrollY - 30}px`;
-    this.askAIButton.style.left = `${rect.left + window.scrollX}px`;
-    this.askAIButton.style.zIndex = '10000';
+    this.floatingButton = document.createElement('button');
+    this.floatingButton.textContent = 'Send to AI';
+    this.floatingButton.className = 'bm-floating-button';
 
-    this.askAIButton.onclick = () => {
-      this.sendAIRequest('ASK', this.currentSelection, 'What does this mean?');
-      this.removeAskAIButton();
+    // Position the button near the selection
+    this.floatingButton.style.position = 'fixed';
+    this.floatingButton.style.top = `${rect.top - 30}px`;
+    this.floatingButton.style.left = `${rect.left + (rect.width / 2)}px`;
+    this.floatingButton.style.transform = 'translateX(-50%)';
+    this.floatingButton.style.zIndex = '10000';
+
+    this.floatingButton.onclick = () => {
+      const text = selection.toString().trim();
+      chrome.runtime.sendMessage({
+        action: 'send-selected-text',
+        payload: text,
+      });
+      this.removeFloatingButton();
     };
 
-    document.body.appendChild(this.askAIButton);
+    document.body.appendChild(this.floatingButton);
   }
 
-  removeAskAIButton() {
-    if (this.askAIButton) {
-      this.askAIButton.remove();
-      this.askAIButton = null;
+  private removeFloatingButton() {
+    if (this.floatingButton) {
+      this.floatingButton.remove();
+      this.floatingButton = null;
     }
   }
 
-  async sendAIRequest(type: 'ASK' | 'EXPLAIN' | 'ANALYZE', text: string, question?: string) {
-    this.showResponsePanel('Thinking...');
+  private async createResponsePanel() {
+    if (this.responsePanel) return;
 
-    chrome.runtime.sendMessage({
-      type: 'AI_REQUEST',
-      data: { type, text, question }
-    }, (response) => {
-      if (chrome.runtime.lastError) {
-        this.updateResponsePanel('Error: ' + chrome.runtime.lastError.message);
-        return;
+    const container = document.createElement('div');
+    container.id = 'bm-response-container';
+    document.body.appendChild(container);
+
+    this.shadowRoot = container.attachShadow({ mode: 'open' });
+
+    const style = document.createElement('style');
+    style.textContent = `
+      :host {
+        position: fixed;
+        left: 20px;
+        bottom: 20px;
+        width: 350px;
+        max-height: 500px;
+        z-index: 10001;
+        font-family: system-ui, -apple-system, sans-serif;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transition: all 0.3s ease;
       }
-      this.updateResponsePanel(response.text, response.error);
+      .panel {
+        background: var(--bm-bg, #fff);
+        color: var(--bm-text, #333);
+        border: 1px solid var(--bm-border, #ddd);
+        display: flex;
+        flex-direction: column;
+        max-height: 500px;
+      }
+      .header {
+        padding: 12px;
+        background: var(--bm-header-bg, #f5f5f5);
+        border-bottom: 1px solid var(--bm-border, #ddd);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: bold;
+      }
+      .close-btn {
+        cursor: pointer;
+        border: none;
+        background: none;
+        font-size: 20px;
+        color: inherit;
+      }
+      .content {
+        padding: 15px;
+        overflow-y: auto;
+        line-height: 1.5;
+        white-space: pre-wrap;
+      }
+      .loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        font-style: italic;
+      }
+      .error {
+        color: #d32f2f;
+        padding: 15px;
+        font-weight: 500;
+      }
+    `;
+    this.shadowRoot.appendChild(style);
+
+    const panel = document.createElement('div');
+    panel.className = 'panel';
+
+    const header = document.createElement('div');
+    header.className = 'header';
+    header.innerHTML = `<span>BrowseMind</span><button class="close-btn">&times;</button>`;
+
+    const content = document.createElement('div');
+    content.className = 'content';
+
+    panel.appendChild(header);
+    panel.appendChild(content);
+    this.shadowRoot.appendChild(panel);
+
+    header.querySelector('.close-btn')?.addEventListener('click', () => {
+      container.remove();
+      this.responsePanel = null;
+      this.shadowRoot = null;
     });
+
+    this.responsePanel = panel;
+    this.applyTheme();
   }
 
-  showResponsePanel(text: string) {
-    if (!this.responsePanel) {
-      this.responsePanel = document.createElement('div');
-      this.responsePanel.className = 'bm-response-panel';
-      this.responsePanel.innerHTML = `
-        <div class="bm-panel-header">
-          <span>BrowseMind</span>
-          <button class="bm-panel-close">×</button>
-        </div>
-        <div class="bm-panel-content"></div>
-      `;
-
-      this.responsePanel.querySelector('.bm-panel-close')?.addEventListener('click', () => {
-        this.responsePanel?.remove();
-        this.responsePanel = null;
-      });
-
-      document.body.appendChild(this.responsePanel);
+  private async applyTheme() {
+    const prefs = await Storage.getPreferences();
+    let theme = prefs.theme;
+    if (theme === 'system') {
+      theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
-    this.updateResponsePanel(text);
+
+    const root = this.shadowRoot;
+    if (!root) return;
+
+    const colors = theme === 'dark'
+      ? { bg: '#222', text: '#eee', border: '#444', headerBg: '#333' }
+      : { bg: '#fff', text: '#333', border: '#ddd', headerBg: '#f5f5f5' };
+
+    root.style.setProperty('--bm-bg', colors.bg);
+    root.style.setProperty('--bm-text', colors.text);
+    root.style.setProperty('--bm-border', colors.border);
+    root.style.setProperty('--bm-header-bg', colors.headerBg);
   }
 
-  updateResponsePanel(text: string, error?: string) {
-    const content = this.responsePanel?.querySelector('.bm-panel-content');
-    if (!content) return;
+  private showResponse(text: string) {
+    this.createResponsePanel();
+    const contentEl = this.shadowRoot?.querySelector('.content');
+    if (contentEl) {
+      contentEl.innerHTML = escapeHTML(text);
+    }
+  }
 
-    // Apply theme
-    getSettings().then(settings => {
-      const theme = settings.theme === 'system'
-        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-        : settings.theme;
+  private showError(error: any) {
+    this.createResponsePanel();
+    const contentEl = this.shadowRoot?.querySelector('.content');
+    if (contentEl) {
+      contentEl.innerHTML = `<div class="error">Error: ${error.message || 'An unknown error occurred'}</div>`;
+    }
+  }
 
-      if (this.responsePanel) {
-        this.responsePanel.className = `bm-response-panel bm-theme-${theme}`;
+  private setupMessageListener() {
+    chrome.runtime.onMessage.addListener(async (message) => {
+      if (message.action === 'show-response') {
+        this.showResponse(message.response.content);
+      } else if (message.action === 'show-error') {
+        this.showError(message.error);
       }
     });
 
-    if (error) {
-      content.innerHTML = `<div class="bm-error">${escapeHTML(error)}</div>`;
-    } else {
-      content.innerHTML = `<div class="bm-text">${escapeHTML(text)}</div>`;
-    }
+    // Handle start-scan from background context menu
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      if (message.action === 'start-scan') {
+        PageReader.extractContent().then(content => {
+          sendResponse({ content });
+        });
+        return true;
+      }
+    });
   }
 }
 
-new ContentScript();
+new BrowseMindUI();

@@ -1,21 +1,28 @@
 export function escapeHTML(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/\"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+  const p = document.createElement('p');
+  p.textContent = str;
+  return p.innerHTML;
 }
 
 export function truncateText(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength) + '...';
+  return text.substring(0, maxLength) + '...';
 }
 
-export function chunkText(text: string, chunkSize: number): string[] {
-  const chunks: string[] = [];
-  for (let i = 0; i < text.length; i += chunkSize) {
-    chunks.push(text.slice(i, i + chunkSize));
+export function redactSensitiveInfo(text: string): string {
+  const sensitivePatterns = [
+    /(api[_-]?key)[:=]\s*["']?([a-zA-Z0-9_\-]{10,})["']?/gi,
+    /(auth[_-]?token)[:=]\s*["']?([a-zA-Z0-9_\-]{10,})["']?/gi,
+    /(bearer\s+)[a-zA-Z0-9_\-]{10,}/gi,
+    /(password)[:=]\s*["']?([a-zA-Z0-9_\-]{10,})["']?/gi,
+  ];
+
+  let redacted = text;
+  for (const pattern of sensitivePatterns) {
+    redacted = redacted.replace(pattern, (match, p1, p2) => {
+      if (p2) return `${p1}[REDACTED]`;
+      return match.replace(/[a-zA-Z0-9_\-]{10,}/, '[REDACTED]');
+    });
   }
-  return chunks;
+  return redacted;
 }

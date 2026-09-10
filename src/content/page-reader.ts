@@ -1,27 +1,31 @@
 export class PageReader {
-  static extractReadableContent(): string {
-    const elementsToIgnore = [
+  static async extractContent(maxChars: number = 30000): Promise<string> {
+    const title = document.title;
+    const url = window.location.href;
+
+    // Select main content areas and ignore noise
+    const noiseSelectors = [
       'nav', 'footer', 'header', 'aside', '.ads', '.sidebar',
-      '.cookie-banner', '.popup', '.social-widgets', '.comments',
-      'script', 'style', 'form'
+      '#footer', '#header', '.cookie-banner', '.popup',
+      'script', 'style', 'noscript'
     ];
 
-    const body = document.body.cloneNode(true) as HTMLElement;
+    const elements = Array.from(document.body.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, td'));
+    let content = '';
 
-    elementsToIgnore.forEach(selector => {
-      const matches = body.querySelectorAll(selector);
-      matches.forEach(el => el.remove());
-    });
+    for (const el of elements) {
+      if (this.isNoise(el, noiseSelectors)) continue;
+      content += el.textContent?.trim() + '\\n';
+    }
 
-    // Remove hidden elements
-    const allElements = body.querySelectorAll('*');
-    allElements.forEach(el => {
-      const style = window.getComputedStyle(el);
-      if (style.display === 'none' || style.visibility === 'hidden' || parseInt(style.opacity) === 0) {
-        el.remove();
-      }
-    });
+    const fullContent = `Title: ${title}\\nURL: ${url}\\n\\nContent:\\n${content}`;
+    return fullContent.substring(0, maxChars);
+  }
 
-    return body.innerText.trim();
+  private static isNoise(el: Element, noiseSelectors: string[]): boolean {
+    for (const selector of noiseSelectors) {
+      if (el.closest(selector)) return true;
+    }
+    return false;
   }
 }

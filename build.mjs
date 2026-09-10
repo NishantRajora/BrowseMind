@@ -1,76 +1,94 @@
 import esbuild from 'esbuild';
-import fs from 'fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'fs';
+import { readdirSync } from 'fs';
 import path from 'path';
 
-const isWatch = process.argv.includes('--watch');
-
-const entries = {
-  'background': 'src/background/service-worker.ts',
-  'content': 'src/content/content.ts',
-  'popup': 'src/popup/popup.ts',
-  'options': 'src/options/options.ts',
+const clean = () => {
+  if (existsSync('dist')) {
+    rmSync('dist', { recursive: true, force: true });
+  }
+  mkdirSync('dist', { recursive: true });
 };
 
-async function build() {
-  const ctx = await esbuild.context({
-    entryPoints: entries,
-    bundle: true,
-    outdir: 'dist',
-    minify: !isWatch,
-    sourcemap: isWatch,
-    target: 'esnext',
-    format: 'esm',
-    entryNames: '[name]',
-    logLevel: 'info',
-  });
-
-  if (isWatch) {
-    await ctx.watch();
-    console.log('Watching for changes...');
-  } else {
-    await ctx.rebuild();
-    await ctx.dispose();
-  }
-
-  // Copy static assets
-  copyStaticAssets();
-}
-
-function copyStaticAssets() {
-  const assets = [
-    'manifest.json',
-    'src/popup/popup.html',
-    'src/popup/popup.css',
-    'src/options/options.html',
-    'src/options/options.css',
+const copyFiles = () => {
+  const filesToCopy = [
+    { src: 'src/popup/popup.html', dest: 'dist/popup/popup.html' },
+    { src: 'src/popup/popup.css', dest: 'dist/popup/popup.css' },
+    { src: 'src/options/options.html', dest: 'dist/options/options.html' },
+    { src: 'src/options/options.css', dest: 'dist/options/options.css' },
+    { src: 'manifest.json', dest: 'dist/manifest.json' },
   ];
 
-  assets.forEach(asset => {
-    const srcPath = path.join(process.cwd(), asset);
-    if (fs.existsSync(srcPath)) {
-      const destPath = path.join('dist', path.basename(asset));
-
-      // Handle HTML files specifically to ensure they are in the root of dist
-      if (asset.endsWith('.html') || asset.endsWith('.css')) {
-         fs.copyFileSync(srcPath, destPath);
-      } else {
-         fs.copyFileSync(srcPath, destPath);
-      }
+  filesToCopy.forEach(({ src, dest }) => {
+    const destDir = path.dirname(dest);
+    if (!existsSync(destDir)) {
+      mkdirSync(destDir, { recursive: true });
     }
+    writeFileSync(dest, readFileSync(src));
   });
+};
 
-  // Copy icons
-  const iconsSrc = path.join('assets', 'icons');
-  const iconsDest = path.join('dist', 'assets', 'icons');
-  if (fs.existsSync(iconsSrc)) {
-    fs.mkdirSync(iconsDest, { recursive: true });
-    fs.readdirSync(iconsSrc).forEach(file => {
-      fs.copyFileSync(path.join(iconsSrc, file), path.join(iconsDest, file));
-    });
+const build = async (watch = false) => {
+  clean();
+  copyFiles();
+
+  const commonConfig = {
+    bundle: true,
+    minify: true,
+    sourcemap: true,
+    target: 'es2020',
+  };
+
+  const entries = [
+    {
+      in: 'src/background/service-worker.ts',
+      out: 'dist/background/service-worker.js',
+      format: 'esm',
+    },
+    {
+      in: 'src/content/content.ts',
+      out: 'dist/content/content.js',
+      format: 'iife',
+    },
+    {
+      in: 'src/popup/popup.ts',
+      out: 'dist/popup/popup.js',
+      format: 'iife',
+    },
+    {
+      in: 'src/options/options.ts',
+      out: 'dist/options/options.js',
+      format: 'iife',
+    },
+  ];
+
+  try {
+    if (watch) {
+      // Watching is a bit complex with multiple formats,
+      // for now we'll just rebuild on change
+      console.log('Watching for changes... (Rebuilding on change)');
+      await esbuild.build({
+        ...commonConfig,
+        entryPoints: entries.map(e => e.in),
+        outdir: 'dist',
+      });
+    } else {
+      for (const entry of entries) {
+        await esbuild.build({
+          ...commonConfig,
+          entryPoints: [entry.in],
+          outfile: entry.out,
+          format: entry.format,
+        });
+      }
+      console.log('Build complete!');
+    }
+  } catch (e) {
+    console.error('Build failed:', e);
+    process.exit(1);
   }
-}
+};
 
-build().catch(err => {
-  console.error(err);
-  process.exit(1);
-});
+const args = process.argv.slice(2);
+const watch = args.includes('--watch');
+build(watch);

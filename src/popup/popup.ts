@@ -1,21 +1,23 @@
-import { getSettings, saveSettings } from '../shared/storage';
+import { Storage } from '../shared/storage.js';
 
-document.addEventListener('DOMContentLoaded', async () => {
-  const enabledInput = document.getElementById('enabled') as HTMLInputElement;
+async function init() {
+  const enabledToggle = document.getElementById('enabled-toggle') as HTMLInputElement;
   const statusText = document.getElementById('status-text') as HTMLElement;
-  const optionsBtn = document.getElementById('open-options') as HTMLButtonElement;
+  const settingsBtn = document.getElementById('settings-btn') as HTMLButtonElement;
 
-  const settings = await getSettings();
-  enabledInput.checked = settings.enabled;
-  statusText.innerText = settings.enabled ? 'Enabled' : 'Disabled';
+  const prefs = await Storage.getPreferences();
+  enabledToggle.checked = prefs.enabled;
+  statusText.textContent = prefs.enabled ? 'ON' : 'OFF';
 
-  enabledInput.onchange = async () => {
-    settings.enabled = enabledInput.checked;
-    await saveSettings(settings);
-    statusText.innerText = settings.enabled ? 'Enabled' : 'Disabled';
+  enabledToggle.onchange = async () => {
+    const newPrefs = { ...prefs, enabled: enabledToggle.checked };
+    await Storage.setPreferences(newPrefs);
+    statusText.textContent = enabledToggle.checked ? 'ON' : 'OFF';
   };
 
-  optionsBtn.onclick = () => {
+  settingsBtn.onclick = () => {
     chrome.runtime.openOptionsPage();
   };
-});
+}
+
+init();

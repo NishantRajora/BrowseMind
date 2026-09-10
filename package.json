@@ -1,26 +1,20 @@
 {
   "name": "browsemind",
   "version": "1.0.0",
-  "description": "AI-powered browser extension for understanding and analyzing webpage content.",
-  "main": "index.js",
+  "description": "AI-powered browser assistant for answering questions from selected webpage text and scanning webpage content.",
+  "type": "module",
   "scripts": {
     "build": "node build.mjs",
     "watch": "node build.mjs --watch",
-    "test": "jest",
-    "test:watch": "jest --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "clean": "rm -rf dist"
   },
   "devDependencies": {
-    "@types/chrome": "^0.0.268",
-    "@types/jest": "^29.5.12",
-    "@types/node": "^20.12.7",
-    "esbuild": "^0.21.1",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.1.2",
-    "typescript": "^5.4.5"
-  },
-  "jest": {
-    "preset": "ts-jest",
-    "testEnvironment": "node"
+    "@types/chrome": "^0.0.240",
+    "esbuild": "^0.20.0",
+    "jsdom": "^29.1.1",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
   }
 }

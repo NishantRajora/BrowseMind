@@ -1,6 +1,6 @@
-import { AIRequest, AIResponse } from '../shared/types';
+import { AIResponse, AIError } from '../shared/types.js';
 
 export interface AIProvider {
-  name: string;
-  generateResponse(request: AIRequest): Promise<AIResponse>;
+  generate(prompt: string, systemPrompt: string): Promise<AIResponse>;
+  testConnection(): Promise<{ success: boolean; message: string }>;
 }

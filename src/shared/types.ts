@@ -1,29 +1,72 @@
-export type AIProvider = 'ollama' | 'openai';
+export type AIProviderType = 'ollama' | 'openai';
 
-export interface ExtensionSettings {
+export interface ProviderConfig {
+  provider: AIProviderType;
+  ollama: {
+    url: string;
+    model: string;
+  };
+  openai: {
+    baseUrl: string;
+    apiKey: string;
+    model: string;
+  };
+}
+
+export interface UserPreferences {
   enabled: boolean;
-  provider: AIProvider;
-  ollamaUrl: string;
-  ollamaModel: string;
-  apiUrl: string;
-  apiKey: string;
-  apiModel: string;
   theme: 'system' | 'light' | 'dark';
   responseStyle: 'concise' | 'normal' | 'detailed';
-  maxText: number;
+  maxWebpageText: number;
+  debugMode: boolean;
 }
 
 export interface AIRequest {
-  prompt: string;
-  context?: string;
+  action: 'selected-text' | 'scan-page';
+  payload: string;
+  context: {
+    pageTitle: string;
+    pageUrl: string;
+    selectedText?: string;
+    webpageContent?: string;
+  };
 }
 
 export interface AIResponse {
-  text: string;
-  error?: string;
+  content: string;
+  duration: number;
+  status: number;
 }
 
-export interface MessagePayload {
-  type: string;
-  data: any;
+export type AIErrorType =
+  | 'CONFIGURATION'
+  | 'NETWORK'
+  | 'TIMEOUT'
+  | 'UNAUTHORIZED'
+  | 'FORBIDDEN'
+  | 'NOT_FOUND'
+  | 'RATE_LIMITED'
+  | 'SERVER_ERROR'
+  | 'INVALID_RESPONSE'
+  | 'UNKNOWN';
+
+export interface AIError {
+  type: AIErrorType;
+  message: string;
+  details?: any;
+}
+
+export interface DebugLogEntry {
+  id: number;
+  timestamp: number;
+  request: AIRequest;
+  provider: AIProviderType;
+  model: string;
+  systemPrompt: string;
+  userPrompt: string;
+  response: string;
+  status: string;
+  duration: number;
+  success: boolean;
+  error?: AIError;
 }
