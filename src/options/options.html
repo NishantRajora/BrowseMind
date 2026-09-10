@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BrowseMind Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <h1>BrowseMind Settings</h1>
+
+    <section>
+      <h2>AI Provider</h2>
+      <select id="provider">
+        <option value="ollama">Ollama (Local)</option>
+        <option value="openai">OpenAI Compatible (Cloud)</option>
+      </select>
+    </section>
+
+    <section id="ollama-settings">
+      <h2>Ollama Configuration</h2>
+      <div class="field">
+        <label>Server URL</label>
+        <input type="text" id="ollamaUrl" placeholder="http://localhost:11434">
+      </div>
+      <div class="field">
+        <label>Model</label>
+        <div class="model-selector">
+          <select id="ollamaModel"></select>
+          <button id="refresh-models" class="btn-secondary" title="Refresh models from Ollama">🔄</button>
+        </div>
+      </div>
+      <div class="test-container">
+        <button id="test-ollama" class="btn-secondary">Test Connection</button>
+        <span id="ollama-test-result" class="test-result"></span>
+      </div>
+    </section>
+
+    <section id="openai-settings" style="display: none;">
+      <h2>OpenAI Compatible Configuration</h2>
+      <div class="field">
+        <label>API Base URL</label>
+        <input type="text" id="apiUrl" placeholder="https://api.openai.com/v1">
+      </div>
+      <div class="field">
+        <label>API Key</label>
+        <input type="password" id="apiKey">
+      </div>
+      <div class="field">
+        <label>Model</label>
+        <input type="text" id="apiModel" placeholder="gpt-4o">
+      </div>
+      <div class="test-container">
+        <button id="test-openai" class="btn-secondary">Test Connection</button>
+        <span id="openai-test-result" class="test-result"></span>
+      </div>
+    </section>
+
+    <section>
+      <h2>Appearance & Behavior</h2>
+      <div class="field">
+        <label>Theme</label>
+        <select id="theme">
+          <option value="system">System</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Response Style</label>
+        <select id="responseStyle">
+          <option value="concise">Concise</option>
+          <option value="normal">Normal</option>
+          <option value="detailed">Detailed</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Max Webpage Text (chars)</label>
+        <input type="number" id="maxText">
+      </div>
+    </section>
+
+    <div class="footer">
+      <button id="save">Save Settings</button>
+    </div>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>
