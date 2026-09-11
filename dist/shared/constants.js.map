@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/shared/constants.ts"],
+  "sourcesContent": ["export const SETTINGS_KEYS = {\n  ENABLED: \"enabled\",\n  PROVIDER: \"provider\",\n  OLLAMA_URL: \"ollamaUrl\",\n  OLLAMA_MODEL: \"ollamaModel\",\n  API_URL: \"apiUrl\",\n  API_KEY: \"apiKey\",\n  API_MODEL: \"apiModel\",\n  THEME: \"theme\",\n  RESPONSE_STYLE: \"responseStyle\",\n  MAX_TEXT: \"maxText\",\n  DEBUG_MODE: \"debugMode\"\n} as const;\n\nexport const DEFAULT_SETTINGS = {\n  enabled: true,\n  provider: \"ollama\", // \"ollama\" | \"api\"\n  ollamaUrl: \"http://localhost:11434\",\n  ollamaModel: \"gpt-oss:120b\",\n  apiUrl: \"\",\n  apiKey: \"\",\n  apiModel: \"\",\n  theme: \"system\", // \"system\" | \"light\" | \"dark\"\n  responseStyle: \"normal\", // \"concise\" | \"normal\" | \"detailed\"\n  maxText: 30000,\n  debugMode: false\n} as const;\n"],
+  "mappings": ";AAAO,IAAM,gBAAgB;AAAA,EAC3B,SAAS;AAAA,EACT,UAAU;AAAA,EACV,YAAY;AAAA,EACZ,cAAc;AAAA,EACd,SAAS;AAAA,EACT,SAAS;AAAA,EACT,WAAW;AAAA,EACX,OAAO;AAAA,EACP,gBAAgB;AAAA,EAChB,UAAU;AAAA,EACV,YAAY;AACd;AAEO,IAAM,mBAAmB;AAAA,EAC9B,SAAS;AAAA,EACT,UAAU;AAAA;AAAA,EACV,WAAW;AAAA,EACX,aAAa;AAAA,EACb,QAAQ;AAAA,EACR,QAAQ;AAAA,EACR,UAAU;AAAA,EACV,OAAO;AAAA;AAAA,EACP,eAAe;AAAA;AAAA,EACf,SAAS;AAAA,EACT,WAAW;AACb;",
+  "names": []
+}

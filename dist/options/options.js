@@ -1,10 +1,142 @@
-"use strict";(()=>{var g={provider:"ollama",ollama:{url:"http://localhost:11434",model:"llama3.2"},openai:{baseUrl:"https://api.openai.com/v1",apiKey:"",model:"gpt-4o"}},D={enabled:!0,theme:"system",responseStyle:"normal",maxWebpageText:3e4,debugMode:!1},k=50;var d=class{static async getConfig(){let n=await chrome.storage.local.get("config");return n.config?{...g,...n.config,ollama:{...g.ollama,...n.config.ollama},openai:{...g.openai,...n.config.openai}}:g}static async setConfig(n){await chrome.storage.local.set({config:n})}static async getPreferences(){return(await chrome.storage.local.get("preferences")).preferences||D}static async setPreferences(n){await chrome.storage.local.set({preferences:n})}static async getDebugLogs(){return(await chrome.storage.local.get("debugLogs")).debugLogs||[]}static async addDebugLog(n){let c=await this.getDebugLogs(),a=[n,...c].slice(0,k);await chrome.storage.local.set({debugLogs:a})}static async clearDebugLogs(){await chrome.storage.local.remove("debugLogs")}};function L(l){let n=[/(api[_-]?key)[:=]\s*["']?([a-zA-Z0-9_\-]{10,})["']?/gi,/(auth[_-]?token)[:=]\s*["']?([a-zA-Z0-9_\-]{10,})["']?/gi,/(bearer\s+)[a-zA-Z0-9_\-]{10,}/gi,/(password)[:=]\s*["']?([a-zA-Z0-9_\-]{10,})["']?/gi],c=l;for(let a of n)c=c.replace(a,(o,p,y)=>y?`${p}[REDACTED]`:o.replace(/[a-zA-Z0-9_\-]{10,}/,"[REDACTED]"));return c}async function N(){let l=document.getElementsByName("provider"),n=document.getElementById("ollama-config"),c=document.getElementById("openai-config"),a=document.getElementById("ollama-url"),o=document.getElementById("ollama-model"),p=document.getElementById("ollama-status"),y=document.getElementById("ollama-refresh"),U=document.getElementById("ollama-test"),T=document.getElementById("openai-url"),b=document.getElementById("openai-key"),M=document.getElementById("openai-model"),B=document.getElementById("openai-status"),A=document.getElementById("openai-test"),m=document.getElementById("debug-mode"),C=document.getElementById("pref-theme"),I=document.getElementById("pref-style"),P=document.getElementById("pref-max-text"),$=document.getElementById("debug-section"),w=document.getElementById("debug-logs"),_=document.getElementById("debug-count"),R=document.getElementById("debug-clear"),F=document.getElementById("debug-refresh"),O=document.getElementById("save-btn"),i=await d.getConfig(),u=await d.getPreferences();l.forEach(e=>{e.value===i.provider&&(e.checked=!0)}),a.value=i.ollama.url,T.value=i.openai.baseUrl,b.value=i.openai.apiKey,M.value=i.openai.model,m.checked=u.debugMode,C.value=u.theme,I.value=u.responseStyle,P.value=u.maxWebpageText.toString();let E=async()=>{try{let e=a.value.trim();if(!e)throw new Error("Server URL is empty");let t=e.endsWith("/")?e.slice(0,-1):e;console.log(`[BrowseMind] Fetching Ollama models from ${t}/api/tags...`);let s=await fetch(`${t}/api/tags`);if(console.log(`[BrowseMind] /api/tags responded with status: ${s.status}`),!s.ok)throw new Error(`Ollama returned status ${s.status}`);let S=await s.json();console.log("[BrowseMind] Models found:",S.models);let v=S.models||[];if(o.innerHTML="",v.length===0){let r=document.createElement("option");r.value="",r.textContent="No models found",o.appendChild(r)}else v.forEach(r=>{let h=document.createElement("option");h.value=r.name,h.textContent=r.name,o.appendChild(h)}),Array.from(o.options).some(r=>r.value===i.ollama.model)?o.value=i.ollama.model:o.value=v[0].name}catch(e){console.error("Failed to fetch Ollama models:",e),o.innerHTML="";let t=document.createElement("option");t.value="",t.textContent=`Error: ${e.message||"CORS/Connection"}`,o.appendChild(t)}},H=async()=>{let e=Array.from(l).find(t=>t.checked)?.value;n.style.display=e==="ollama"?"block":"none",c.style.display=e==="openai"?"block":"none",e==="ollama"&&await E()};l.forEach(e=>e.onchange=H),a.oninput=E,H();let x=()=>{$.style.display=m.checked?"block":"none"};m.onchange=x,x(),U.onclick=async()=>{p.textContent="Testing...",chrome.runtime.sendMessage({action:"test-connection"},e=>{p.textContent=`Connection: ${e.success?"Connected":"Not Connected"}`,e.success||console.error(e.message)})},A.onclick=async()=>{B.textContent="Testing...",chrome.runtime.sendMessage({action:"test-connection"},e=>{B.textContent=`Connection: ${e.success?"Connected":"Not Connected"}`,e.success||console.error(e.message)})},y.onclick=E;let f=async()=>{let e=await chrome.runtime.sendMessage({action:"get-debug-logs"});_.textContent=`Requests: ${e.length}`,w.innerHTML="",e.forEach(t=>{let s=document.createElement("div");s.className="log-entry",s.innerHTML=`
-        <div class="log-entry-header">Request #${t.id} - ${t.success?"Success":"Failed"}</div>
-        <div class="log-entry-detail">Time: ${new Date(t.timestamp).toLocaleString()}</div>
-        <div class="log-entry-detail">Provider: ${t.provider} (${t.model})</div>
-        <div class="log-entry-detail">Page: ${t.request.context.pageTitle} (${t.request.context.pageUrl})</div>
-        <div class="log-entry-detail">User Prompt: ${L(t.userPrompt)}</div>
-        <div class="log-entry-detail">AI Response: ${L(t.response)}</div>
-        <div class="log-entry-detail">Duration: ${t.duration.toFixed(2)}ms</div>
-      `,w.appendChild(s)})};F.onclick=f,R.onclick=async()=>{await chrome.runtime.sendMessage({action:"clear-debug-logs"}),f()},m.checked&&f(),O.onclick=async()=>{let e={provider:Array.from(l).find(s=>s.checked)?.value,ollama:{url:a.value,model:o.value},openai:{baseUrl:T.value,apiKey:b.value,model:M.value}},t={...u,debugMode:m.checked,theme:C.value,responseStyle:I.value,maxWebpageText:parseInt(P.value,10)||3e4};await d.setConfig(e),await d.setPreferences(t),alert("Settings saved!"),t.debugMode&&f()}}N();})();
+// src/shared/constants.ts
+var DEFAULT_SETTINGS = {
+  enabled: true,
+  provider: "ollama",
+  // "ollama" | "api"
+  ollamaUrl: "http://localhost:11434",
+  ollamaModel: "gpt-oss:120b",
+  apiUrl: "",
+  apiKey: "",
+  apiModel: "",
+  theme: "system",
+  // "system" | "light" | "dark"
+  responseStyle: "normal",
+  // "concise" | "normal" | "detailed"
+  maxText: 3e4,
+  debugMode: false
+};
+
+// src/shared/storage.ts
+async function getSettings() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(DEFAULT_SETTINGS, (items) => {
+      resolve({ ...DEFAULT_SETTINGS, ...items });
+    });
+  });
+}
+async function setSettings(partial) {
+  return new Promise((resolve) => {
+    chrome.storage.local.set(partial, () => resolve());
+  });
+}
+
+// src/options/options.ts
+document.addEventListener("DOMContentLoaded", async () => {
+  const enabledEl = document.getElementById("enabled");
+  const themeEl = document.getElementById("theme");
+  const responseStyleEl = document.getElementById("responseStyle");
+  const debugModeEl = document.getElementById("debugMode");
+  const providerSelectEl = document.getElementById("providerSelect");
+  const ollamaDiv = document.getElementById("ollamaSettings");
+  const apiDiv = document.getElementById("apiSettings");
+  const ollamaUrlEl = document.getElementById("ollamaUrl");
+  const ollamaModelSelect = document.getElementById("ollamaModel");
+  const apiUrlEl = document.getElementById("apiUrl");
+  const apiKeyEl = document.getElementById("apiKey");
+  const apiModelEl = document.getElementById("apiModel");
+  const refreshBtn = document.getElementById("refreshModelsBtn");
+  const testBtn = document.getElementById("testAiBtn");
+  const testResultDiv = document.getElementById("testResult");
+  const settings = await getSettings();
+  enabledEl.checked = settings.enabled;
+  themeEl.value = settings.theme;
+  responseStyleEl.value = settings.responseStyle;
+  debugModeEl.checked = settings.debugMode;
+  providerSelectEl.value = settings.provider;
+  ollamaUrlEl.value = settings.ollamaUrl;
+  ollamaModelSelect.value = settings.ollamaModel;
+  apiUrlEl.value = settings.apiUrl;
+  apiKeyEl.value = settings.apiKey;
+  apiModelEl.value = settings.apiModel;
+  function updateProviderUI() {
+    if (providerSelectEl.value === "ollama") {
+      ollamaDiv.style.display = "block";
+      apiDiv.style.display = "none";
+    } else {
+      ollamaDiv.style.display = "none";
+      apiDiv.style.display = "block";
+    }
+  }
+  providerSelectEl.addEventListener("change", updateProviderUI);
+  updateProviderUI();
+  const inputs = [
+    enabledEl,
+    themeEl,
+    responseStyleEl,
+    debugModeEl,
+    providerSelectEl,
+    ollamaUrlEl,
+    ollamaModelSelect,
+    apiUrlEl,
+    apiKeyEl,
+    apiModelEl
+  ];
+  inputs.forEach((el) => {
+    el.addEventListener("change", async () => {
+      const newSettings = {
+        enabled: enabledEl.checked,
+        theme: themeEl.value,
+        responseStyle: responseStyleEl.value,
+        debugMode: debugModeEl.checked,
+        provider: providerSelectEl.value,
+        ollamaUrl: ollamaUrlEl.value.trim(),
+        ollamaModel: ollamaModelSelect.value,
+        apiUrl: apiUrlEl.value.trim(),
+        apiKey: apiKeyEl.value,
+        apiModel: apiModelEl.value.trim()
+      };
+      await setSettings(newSettings);
+    });
+  });
+  async function refreshModels() {
+    const url = ollamaUrlEl.value.trim() || "http://localhost:11434";
+    try {
+      const resp = await fetch(`${url.replace(/\\+$/, "")}/api/tags`);
+      if (!resp.ok)
+        throw new Error(`Status ${resp.status}`);
+      const data = await resp.json();
+      const models = (data.models || []).map((m) => m.name);
+      ollamaModelSelect.innerHTML = "";
+      models.forEach((m) => {
+        const opt = document.createElement("option");
+        opt.value = m;
+        opt.textContent = m;
+        ollamaModelSelect.appendChild(opt);
+      });
+    } catch (e) {
+      testResultDiv.textContent = `Error: ${e.message}`;
+    }
+  }
+  refreshBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    refreshModels();
+  });
+  testBtn.addEventListener("click", async (e) => {
+    e.preventDefault();
+    testResultDiv.textContent = "Testing...";
+    const resp = await new Promise((resolve) => {
+      chrome.runtime.sendMessage({ type: "TEST_AI" }, resolve);
+    });
+    if (resp?.success) {
+      testResultDiv.textContent = "\u2705 AI works!";
+      testResultDiv.style.color = "green";
+    } else {
+      testResultDiv.textContent = `\u274C Failed: ${resp?.error ?? "unknown"}`;
+      testResultDiv.style.color = "red";
+    }
+  });
+  if (settings.provider === "ollama") {
+    refreshModels();
+  }
+});
 //# sourceMappingURL=options.js.map

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/ai/prompts.ts"],
+  "sourcesContent": ["import { ExtensionSettings } from \"../shared/types\";\n\nexport function buildPrompt(selection: string, pageContent: string, settings: ExtensionSettings): string {\n  const styleInstr = settings.responseStyle === \"concise\"\n    ? \"Give a concise answer.\"\n    : settings.responseStyle === \"detailed\"\n    ? \"Provide a detailed answer.\"\n    : \"\";\n\n  const pageSnippet = pageContent\n    ? `\\nRelevant page excerpt (max ${settings.maxText} chars):\\n${pageContent}`\n    : \"\";\n\n  return `${styleInstr}\nUser selected text:\n\"\"\"${selection}\"\"\"\n${pageSnippet}`;\n}\n"],
+  "mappings": ";AAEO,SAAS,YAAY,WAAmB,aAAqB,UAAqC;AACvG,QAAM,aAAa,SAAS,kBAAkB,YAC1C,2BACA,SAAS,kBAAkB,aAC3B,+BACA;AAEJ,QAAM,cAAc,cAChB;AAAA,6BAAgC,SAAS,OAAO;AAAA,EAAa,WAAW,KACxE;AAEJ,SAAO,GAAG,UAAU;AAAA;AAAA,KAEjB,SAAS;AAAA,EACZ,WAAW;AACb;",
+  "names": []
+}

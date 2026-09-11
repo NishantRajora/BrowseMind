@@ -1,111 +1,80 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <link rel="stylesheet" href="options.css">
+  <meta charset="UTF-8" />
+  <title>BrowseMind Options</title>
+  <link rel="stylesheet" href="options.css" />
 </head>
 <body>
-  <div class="container">
-    <h1>BrowseMind Settings</h1>
+  <h1>BrowseMind Options</h1>
+  <section id="general">
+    <label>
+      <input type="checkbox" id="enabled" />
+      Enabled
+    </label>
+    <label>
+      Theme:
+      <select id="theme">
+        <option value="system">System</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+    </label>
+    <label>
+      Response style:
+      <select id="responseStyle">
+        <option value="concise">Concise</option>
+        <option value="normal">Normal</option>
+        <option value="detailed">Detailed</option>
+      </select>
+    </label>
+    <label>
+      Debug mode:
+      <input type="checkbox" id="debugMode" />
+    </label>
+  </section>
 
-    <section>
-      <h2>AI Provider</h2>
-      <div class="radio-group">
-        <label>
-          <input type="radio" name="provider" value="ollama"> Ollama (Local)
-        </label>
-        <label>
-          <input type="radio" name="provider" value="openai"> OpenAI Compatible (Cloud)
-        </label>
-      </div>
-    </section>
+  <section id="provider">
+    <h2>AI Provider</h2>
+    <label>
+      Provider:
+      <select id="providerSelect">
+        <option value="ollama">Ollama</option>
+        <option value="api">API Key</option>
+      </select>
+    </label>
 
-    <section id="ollama-config" class="config-section">
-      <h2>Ollama Configuration</h2>
-      <div class="field">
-        <label>Server URL</label>
-        <input type="text" id="ollama-url">
-      </div>
-      <div class="field">
-        <label>Model</label>
-        <input type="text" id="ollama-model">
-      </div>
-      <div class="actions">
-        <button id="ollama-refresh">Refresh Models</button>
-        <button id="ollama-test">Test Connection</button>
-      </div>
-      <div id="ollama-status" class="status">Connection: Not Connected</div>
-    </section>
-
-    <section id="openai-config" class="config-section">
-      <h2>OpenAI-Compatible Configuration</h2>
-      <div class="field">
-        <label>API Base URL</label>
-        <input type="text" id="openai-url">
-      </div>
-      <div class="field">
-        <label>API Key</label>
-        <input type="password" id="openai-key">
-      </div>
-      <div class="field">
-        <label>Model</label>
-        <input type="text" id="openai-model">
-      </div>
-      <div class="actions">
-        <button id="openai-test">Test Connection</button>
-      </div>
-      <div id="openai-status" class="status">Connection: Not Connected</div>
-    </section>
-
-    <section>
-      <h2>Data & Privacy</h2>
-      <div class="toggle-container">
-        <span>Debug Mode</span>
-        <label class="switch">
-          <input type="checkbox" id="debug-mode">
-          <span class="slider round"></span>
-        </label>
-      </div>
-    </section>
-
-    <section>
-      <h2>Preferences</h2>
-      <div class="field">
-        <label>Theme</label>
-        <select id="pref-theme">
-          <option value="system">System</option>
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Response Style</label>
-        <select id="pref-style">
-          <option value="concise">Concise</option>
-          <option value="normal">Normal</option>
-          <option value="detailed">Detailed</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Maximum Webpage Text (chars)</label>
-        <input type="number" id="pref-max-text">
-      </div>
-    </section>
-
-    <section id="debug-section" class="debug-section" style="display: none;">
-      <h2>Debug Console</h2>
-      <div class="debug-actions">
-        <button id="debug-clear">Clear Logs</button>
-        <button id="debug-refresh">Refresh</button>
-        <span id="debug-count">Requests: 0</span>
-      </div>
-      <div id="debug-logs" class="logs-container"></div>
-    </section>
-
-    <div class="footer">
-      <button id="save-btn">Save All Settings</button>
+    <div id="ollamaSettings" class="provider-settings">
+      <label>
+        Ollama URL:
+        <input type="url" id="ollamaUrl" placeholder="http://localhost:11434" />
+      </label>
+      <label>
+        Model:
+        <select id="ollamaModel"></select>
+      </label>
+      <button id="refreshModelsBtn">Refresh Models</button>
     </div>
-  </div>
-  <script src="options.js"></script>
+
+    <div id="apiSettings" class="provider-settings" style="display:none;">
+      <label>
+        Base URL:
+        <input type="url" id="apiUrl" />
+      </label>
+      <label>
+        API Key:
+        <input type="password" id="apiKey" />
+      </label>
+      <label>
+        Model:
+        <input type="text" id="apiModel" />
+      </label>
+    </div>
+
+    <button id="testAiBtn">Test AI</button>
+    <div id="testResult" class="result"></div>
+  </section>
+
+  <script src="options.js" type="module"></script>
 </body>
 </html>

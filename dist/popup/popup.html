@@ -1,24 +1,80 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <link rel="stylesheet" href="popup.css">
+  <meta charset="UTF-8" />
+  <title>BrowseMind Settings</title>
+  <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>BrowseMind</h1>
-      <p>AI webpage assistant</p>
-    </header>
-    <div class="toggle-container">
-      <span>Status: <span id="status-text">ON</span></span>
-      <label class="switch">
-        <input type="checkbox" id="enabled-toggle">
-        <span class="slider round"></span>
+  <h1>BrowseMind</h1>
+  <section id="general">
+    <label>
+      <input type="checkbox" id="enabled" />
+      Enabled
+    </label>
+    <label>
+      Theme:
+      <select id="theme">
+        <option value="system">System</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+    </label>
+    <label>
+      Response style:
+      <select id="responseStyle">
+        <option value="concise">Concise</option>
+        <option value="normal">Normal</option>
+        <option value="detailed">Detailed</option>
+      </select>
+    </label>
+    <label>
+      Debug mode:
+      <input type="checkbox" id="debugMode" />
+    </label>
+  </section>
+
+  <section id="provider">
+    <h2>AI Provider</h2>
+    <label>
+      Provider:
+      <select id="providerSelect">
+        <option value="ollama">Ollama</option>
+        <option value="api">API Key</option>
+      </select>
+    </label>
+
+    <div id="ollamaSettings" class="provider-settings">
+      <label>
+        Ollama URL:
+        <input type="url" id="ollamaUrl" placeholder="http://localhost:11434" />
+      </label>
+      <label>
+        Model:
+        <select id="ollamaModel"></select>
+      </label>
+      <button id="refreshModelsBtn">Refresh Models</button>
+    </div>
+
+    <div id="apiSettings" class="provider-settings" style="display:none;">
+      <label>
+        Base URL:
+        <input type="url" id="apiUrl" />
+      </label>
+      <label>
+        API Key:
+        <input type="password" id="apiKey" />
+      </label>
+      <label>
+        Model:
+        <input type="text" id="apiModel" />
       </label>
     </div>
-    <button id="settings-btn">⚙ Settings</button>
-  </div>
-  <script src="popup.js"></script>
+
+    <button id="testAiBtn">Test AI</button>
+    <div id="testResult" class="result"></div>
+  </section>
+
+  <script src="popup.js" type="module"></script>
 </body>
 </html>

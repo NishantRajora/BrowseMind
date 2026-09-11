@@ -1,31 +1,52 @@
-export class PageReader {
-  static async extractContent(maxChars: number = 30000): Promise<string> {
-    const title = document.title;
-    const url = window.location.href;
+import { getSettings } from "../shared/storage";
 
-    // Select main content areas and ignore noise
-    const noiseSelectors = [
-      'nav', 'footer', 'header', 'aside', '.ads', '.sidebar',
-      '#footer', '#header', '.cookie-banner', '.popup',
-      'script', 'style', 'noscript'
-    ];
+/**
+ * Returns a cleaned, readable version of the page's text content.
+ * - Removes scripts, styles, navbars, footers, sidebars, ads, hidden elements.
+ * - Truncates to the maxText length defined in settings (default 30000).
+ */
+export async function extractPageContent(): Promise<string> {
+  const settings = await getSettings();
+  const maxChars = settings.maxText ?? 30000;
 
-    const elements = Array.from(document.body.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, td'));
-    let content = '';
+  // Clone body to avoid mutating the live DOM.
+  const clone = document.body.cloneNode(true) as HTMLElement;
 
-    for (const el of elements) {
-      if (this.isNoise(el, noiseSelectors)) continue;
-      content += el.textContent?.trim() + '\\n';
+  // Remove unwanted selectors.
+  const selectors = [
+    "script",
+    "style",
+    "noscript",
+    "header",
+    "nav",
+    "footer",
+    "aside",
+    "svg",
+    "canvas",
+    ".ad",
+    ".ads",
+    ".advertisement",
+    ".cookie",
+    ".popup",
+    ".modal"
+  ];
+  selectors.forEach((sel) => {
+    const elems = clone.querySelectorAll(sel);
+    elems.forEach((el) => el.remove());
+  });
+
+  // Remove elements hidden via CSS.
+  const allElems = clone.querySelectorAll<HTMLElement>("*");
+  allElems.forEach((el) => {
+    const style = window.getComputedStyle(el);
+    if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") {
+      el.remove();
     }
+  });
 
-    const fullContent = `Title: ${title}\\nURL: ${url}\\n\\nContent:\\n${content}`;
-    return fullContent.substring(0, maxChars);
+  let text = (clone.textContent || "").trim().replace(/\s+/g, " ");
+  if (text.length > maxChars) {
+    text = text.slice(0, maxChars);
   }
-
-  private static isNoise(el: Element, noiseSelectors: string[]): boolean {
-    for (const selector of noiseSelectors) {
-      if (el.closest(selector)) return true;
-    }
-    return false;
-  }
+  return text;
 }

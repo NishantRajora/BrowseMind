@@ -1,78 +1,55 @@
-import { AIProvider } from './provider.js';
-import { AIResponse, AIError, AIErrorType } from '../shared/types.js';
+import { OllamaConfig, AIProvider } from "../shared/types";
+import { fetchWithTimeout } from "../shared/utils";
 
 export class OllamaProvider implements AIProvider {
-  constructor(private url: string, private model: string) {}
+  private url: string;
+  private model: string;
 
-  async generate(prompt: string, systemPrompt: string): Promise<AIResponse> {
-    const startTime = performance.now();
+  constructor(config: OllamaConfig) {
+    this.url = config.url.replace(/\/+$/,""); // strip trailing slash
+    this.model = config.model;
+  }
+
+  async generate(prompt: string, maxTokens?: number): Promise<string> {
+    const endpoint = `${this.url}/api/generate`;
+    const payload: any = {
+      model: this.model,
+      prompt,
+      stream: false
+    };
+    if (maxTokens !== undefined) payload.num_predict = maxTokens;
+    const start = Date.now();
+    const response = await fetchWithTimeout(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const duration = Date.now() - start; // currently unused but useful for debugging
+    if (!response.ok) {
+      const txt = await response.text();
+      throw new Error(`Ollama request failed ${response.status}: ${txt}`);
+    }
+    const data = await response.json();
+    const answer = data.response?.trim() ?? "";
+    return answer;
+  }
+
+  async testConnection(): Promise<void> {
+    const endpoint = `${this.url}/api/tags`;
+    const response = await fetchWithTimeout(endpoint);
+    if (!response.ok) {
+      throw new Error(`Failed to list models: ${response.status}`);
+    }
+    // Successful if we get JSON back; no further validation needed
+  }
+
+  async testAI(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.url}/api/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: this.model,
-          prompt: prompt,
-          system: systemPrompt,
-          stream: false,
-        }),
-      });
-
-      if (!response.ok) {
-        throw this.handleHttpError(response.status);
-      }
-
-      const data = await response.json();
-      if (!data.response) {
-        throw this.createError('INVALID_RESPONSE', 'Ollama returned an empty response');
-      }
-
-      return {
-        content: data.response.trim(),
-        duration: performance.now() - startTime,
-        status: response.status,
-      };
-    } catch (error: any) {
-      if (error.type) throw error;
-      throw this.handleNetworkError(error);
+      await this.testConnection();
+      const answer = await this.generate("Hello");
+      return !!answer && answer.length > 0;
+    } catch {
+      return false;
     }
-  }
-
-  async testConnection(): Promise<{ success: boolean; message: string }> {
-    try {
-      const rawUrl = this.url.trim();
-      const url = rawUrl.endsWith('/') ? rawUrl.slice(0, -1) : rawUrl;
-
-      const response = await fetch(`${url}/api/tags`);
-      if (response.ok) {
-        return { success: true, message: 'Connected to Ollama' };
-      }
-      return { success: false, message: `Ollama returned status ${response.status}` };
-    } catch (error: any) {
-      return { success: false, message: `Connection failed: ${error.message}. Check if Ollama is running and OLLAMA_ORIGINS is set.` };
-    }
-  }
-
-  private handleHttpError(status: number): AIError {
-    switch (status) {
-      case 401: return this.createError('UNAUTHORIZED', 'Ollama unauthorized');
-      case 403: return this.createError('FORBIDDEN', 'Ollama forbidden');
-      case 404: return this.createError('NOT_FOUND', 'Ollama model or endpoint not found');
-      case 429: return this.createError('RATE_LIMITED', 'Ollama rate limited');
-      default:
-        if (status >= 500) return this.createError('SERVER_ERROR', 'Ollama server error');
-        return this.createError('UNKNOWN', `Ollama returned status ${status}`);
-    }
-  }
-
-  private handleNetworkError(error: any): AIError {
-    if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      return this.createError('NETWORK', 'Could not connect to Ollama. Please check if Ollama is running and OLLAMA_ORIGINS is set.');
-    }
-    return this.createError('UNKNOWN', error.message);
-  }
-
-  private createError(type: AIErrorType, message: string): AIError {
-    return { type, message };
   }
 }

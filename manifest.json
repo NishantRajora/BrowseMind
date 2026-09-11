@@ -2,20 +2,14 @@
   "manifest_version": 3,
   "name": "BrowseMind",
   "version": "1.0.0",
-  "description": "AI-powered browser assistant for answering questions from selected webpage text and scanning webpage content.",
-  "permissions": [
-    "storage",
-    "contextMenus",
-    "activeTab",
-    "scripting"
-  ],
-  "host_permissions": [
-    "<all_urls>"
-  ],
+  "description": "AI-powered contextual assistance for any web page.",
   "action": {
     "default_popup": "popup/popup.html"
   },
-  "options_page": "options/options.html",
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
   "background": {
     "service_worker": "background/service-worker.js",
     "type": "module"
@@ -23,7 +17,24 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content/content.js"]
+      "js": ["content/content.js"],
+      "run_at": "document_idle"
+      }
+
+  ],
+  "permissions": [
+    "storage",
+    "activeTab",
+    "contextMenus",
+    "scripting"
+  ],
+  "host_permissions": [
+    "*://*/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["**/*.js", "**/*.css", "**/*.html", "assets/icons/*"],
+      "matches": ["<all_urls>"]
     }
   ]
 }

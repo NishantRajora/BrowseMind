@@ -1,72 +1,41 @@
-export type AIProviderType = 'ollama' | 'openai';
-
-export interface ProviderConfig {
-  provider: AIProviderType;
-  ollama: {
-    url: string;
-    model: string;
-  };
-  openai: {
-    baseUrl: string;
-    apiKey: string;
-    model: string;
-  };
-}
-
-export interface UserPreferences {
+export interface ExtensionSettings {
   enabled: boolean;
-  theme: 'system' | 'light' | 'dark';
-  responseStyle: 'concise' | 'normal' | 'detailed';
-  maxWebpageText: number;
+  provider: "ollama" | "api";
+  ollamaUrl: string;
+  ollamaModel: string;
+  apiUrl: string;
+  apiKey: string;
+  apiModel: string;
+  theme: "system" | "light" | "dark";
+  responseStyle: "concise" | "normal" | "detailed";
+  maxText: number;
   debugMode: boolean;
 }
 
-export interface AIRequest {
-  action: 'selected-text' | 'scan-page';
-  payload: string;
-  context: {
-    pageTitle: string;
-    pageUrl: string;
-    selectedText?: string;
-    webpageContent?: string;
-  };
-}
-
-export interface AIResponse {
-  content: string;
-  duration: number;
-  status: number;
-}
-
-export type AIErrorType =
-  | 'CONFIGURATION'
-  | 'NETWORK'
-  | 'TIMEOUT'
-  | 'UNAUTHORIZED'
-  | 'FORBIDDEN'
-  | 'NOT_FOUND'
-  | 'RATE_LIMITED'
-  | 'SERVER_ERROR'
-  | 'INVALID_RESPONSE'
-  | 'UNKNOWN';
-
-export interface AIError {
-  type: AIErrorType;
-  message: string;
-  details?: any;
-}
-
-export interface DebugLogEntry {
-  id: number;
-  timestamp: number;
-  request: AIRequest;
-  provider: AIProviderType;
+export interface OllamaConfig {
+  url: string;
   model: string;
-  systemPrompt: string;
-  userPrompt: string;
-  response: string;
-  status: string;
-  duration: number;
-  success: boolean;
-  error?: AIError;
+}
+
+export interface APIConfig {
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+}
+
+export interface AIProvider {
+  generate(prompt: string, maxTokens?: number): Promise<string>;
+  testConnection(): Promise<void>;
+  testAI(): Promise<boolean>;
+}
+
+export interface DebugInfo {
+  provider: string;
+  endpoint: string;
+  model: string;
+  request: any;
+  status: number;
+  response: any;
+  durationMs: number;
+  error?: string;
 }
