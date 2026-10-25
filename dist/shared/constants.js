@@ -15,7 +15,8 @@ var SETTINGS_KEYS = {
   FONT_SIZE: "fontSize",
   PANEL_OPACITY: "panelOpacity",
   PANEL_POSITION: "panelPosition",
-  TAB_HOTKEY: "tabHotkey"
+  TAB_HOTKEY: "tabHotkey",
+  CAMOUFLAGE_MODE: "camouflageMode"
 };
 var DEFAULT_SETTINGS = {
   enabled: true,
@@ -37,7 +38,8 @@ var DEFAULT_SETTINGS = {
   panelOpacity: 80,
   panelPosition: "left",
   // "left" | "right"
-  tabHotkey: true
+  tabHotkey: true,
+  camouflageMode: false
 };
 export {
   DEFAULT_SETTINGS,

@@ -19,7 +19,8 @@ var DEFAULT_SETTINGS = {
   panelOpacity: 80,
   panelPosition: "left",
   // "left" | "right"
-  tabHotkey: true
+  tabHotkey: true,
+  camouflageMode: false
 };
 
 // src/shared/storage.ts
@@ -130,11 +131,86 @@ async function triggerAI(selectedText, settings) {
     }
   );
 }
+function parseRgb(colorStr) {
+  if (!colorStr || colorStr === "transparent")
+    return null;
+  const match = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+  if (match) {
+    return {
+      r: parseInt(match[1], 10),
+      g: parseInt(match[2], 10),
+      b: parseInt(match[3], 10),
+      a: match[4] !== void 0 ? parseFloat(match[4]) : 1
+    };
+  }
+  return null;
+}
+function detectBackgroundColor(x, y) {
+  let el = null;
+  try {
+    el = document.elementFromPoint(x, y);
+  } catch {
+  }
+  if (!el)
+    el = document.body || document.documentElement;
+  while (el && el !== document.documentElement) {
+    const bg = window.getComputedStyle(el).backgroundColor;
+    const parsed = parseRgb(bg);
+    if (parsed && parsed.a > 0.05) {
+      return { r: parsed.r, g: parsed.g, b: parsed.b };
+    }
+    el = el.parentElement;
+  }
+  if (document.documentElement) {
+    const bg = window.getComputedStyle(document.documentElement).backgroundColor;
+    const parsed = parseRgb(bg);
+    if (parsed && parsed.a > 0.05) {
+      return { r: parsed.r, g: parsed.g, b: parsed.b };
+    }
+  }
+  return { r: 255, g: 255, b: 255 };
+}
+function getCamouflageStyle(bg) {
+  const lum = 0.299 * bg.r + 0.587 * bg.g + 0.114 * bg.b;
+  let textR;
+  let textG;
+  let textB;
+  if (lum > 210) {
+    textR = Math.max(0, Math.round(bg.r - 35));
+    textG = Math.max(0, Math.round(bg.g - 35));
+    textB = Math.max(0, Math.round(bg.b - 35));
+  } else {
+    textR = Math.min(255, Math.round(bg.r + (255 - bg.r) * 0.14 + 30));
+    textG = Math.min(255, Math.round(bg.g + (255 - bg.g) * 0.14 + 30));
+    textB = Math.min(255, Math.round(bg.b + (255 - bg.b) * 0.14 + 30));
+  }
+  return {
+    color: `rgb(${textR}, ${textG}, ${textB})`,
+    textShadow: "none"
+  };
+}
 function showPanel(content, debug, settings) {
   const fontSize = settings?.fontSize ?? 13;
   const rawOpacity = settings?.panelOpacity ?? 80;
   const opacity = Math.min(Math.max(rawOpacity, 10), 100) / 100;
   const position = settings?.panelPosition ?? "left";
+  const camouflage = settings?.camouflageMode ?? false;
+  let textColor = "#ffffff";
+  let textShadow = `
+    -1px -1px 1px rgba(0,0,0,0.9),
+     1px -1px 1px rgba(0,0,0,0.9),
+    -1px  1px 1px rgba(0,0,0,0.9),
+     1px  1px 1px rgba(0,0,0,0.9),
+     0px  2px 4px rgba(0,0,0,0.95)
+  `;
+  if (camouflage) {
+    const testX = position === "right" ? Math.max(window.innerWidth - 100, 20) : 40;
+    const testY = Math.round(window.innerHeight * 0.2);
+    const bg = detectBackgroundColor(testX, testY);
+    const camStyle = getCamouflageStyle(bg);
+    textColor = camStyle.color;
+    textShadow = camStyle.textShadow;
+  }
   if (!panel) {
     panel = document.createElement("div");
     panel.id = "browsemind-panel";
@@ -177,14 +253,9 @@ function showPanel(content, debug, settings) {
       font-size: ${fontSize}px;
       line-height: 1.5;
       font-weight: 500;
-      color: #ffffff;
+      color: ${textColor};
       opacity: ${opacity};
-      text-shadow:
-        -1px -1px 1px rgba(0,0,0,0.9),
-         1px -1px 1px rgba(0,0,0,0.9),
-        -1px  1px 1px rgba(0,0,0,0.9),
-         1px  1px 1px rgba(0,0,0,0.9),
-         0px  2px 4px rgba(0,0,0,0.95);
+      text-shadow: ${textShadow};
       white-space: pre-wrap;
       word-break: break-word;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -235,6 +306,8 @@ function showPanel(content, debug, settings) {
   const contentDiv = panel.querySelector("#browsemind-panel-content");
   contentDiv.style.fontSize = `${fontSize}px`;
   contentDiv.style.opacity = `${opacity}`;
+  contentDiv.style.color = textColor;
+  contentDiv.style.textShadow = textShadow;
   contentDiv.textContent = content;
 }
 document.addEventListener("keydown", async (e) => {

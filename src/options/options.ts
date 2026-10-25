@@ -3,6 +3,7 @@ import { getSettings, setSettings } from "../shared/storage";
 document.addEventListener("DOMContentLoaded", async () => {
   const enabledEl = document.getElementById("enabled") as HTMLInputElement;
   const tabHotkeyEl = document.getElementById("tabHotkey") as HTMLInputElement;
+  const camouflageModeEl = document.getElementById("camouflageMode") as HTMLInputElement;
   const themeEl = document.getElementById("theme") as HTMLSelectElement;
   const responseStyleEl = document.getElementById("responseStyle") as HTMLSelectElement;
   const panelPositionEl = document.getElementById("panelPosition") as HTMLSelectElement;
@@ -28,6 +29,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Populate UI
   enabledEl.checked = settings.enabled;
   tabHotkeyEl.checked = settings.tabHotkey ?? true;
+  camouflageModeEl.checked = settings.camouflageMode ?? false;
   themeEl.value = settings.theme;
   responseStyleEl.value = settings.responseStyle;
   panelPositionEl.value = settings.panelPosition ?? "left";
@@ -73,6 +75,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const inputs = [
     enabledEl,
     tabHotkeyEl,
+    camouflageModeEl,
     themeEl,
     responseStyleEl,
     panelPositionEl,
@@ -92,6 +95,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const newSettings: Partial<any> = {
         enabled: enabledEl.checked,
         tabHotkey: tabHotkeyEl.checked,
+        camouflageMode: camouflageModeEl.checked,
         theme: themeEl.value as any,
         responseStyle: responseStyleEl.value as any,
         panelPosition: panelPositionEl.value as any,

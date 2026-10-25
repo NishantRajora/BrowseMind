@@ -19,7 +19,8 @@ var DEFAULT_SETTINGS = {
   panelOpacity: 80,
   panelPosition: "left",
   // "left" | "right"
-  tabHotkey: true
+  tabHotkey: true,
+  camouflageMode: false
 };
 
 // src/shared/storage.ts
@@ -40,6 +41,7 @@ async function setSettings(partial) {
 document.addEventListener("DOMContentLoaded", async () => {
   const enabledEl = document.getElementById("enabled");
   const tabHotkeyEl = document.getElementById("tabHotkey");
+  const camouflageModeEl = document.getElementById("camouflageMode");
   const themeEl = document.getElementById("theme");
   const responseStyleEl = document.getElementById("responseStyle");
   const panelPositionEl = document.getElementById("panelPosition");
@@ -62,6 +64,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const settings = await getSettings();
   enabledEl.checked = settings.enabled;
   tabHotkeyEl.checked = settings.tabHotkey ?? true;
+  camouflageModeEl.checked = settings.camouflageMode ?? false;
   themeEl.value = settings.theme;
   responseStyleEl.value = settings.responseStyle;
   panelPositionEl.value = settings.panelPosition ?? "left";
@@ -103,6 +106,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const inputs = [
     enabledEl,
     tabHotkeyEl,
+    camouflageModeEl,
     themeEl,
     responseStyleEl,
     panelPositionEl,
@@ -122,6 +126,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const newSettings = {
         enabled: enabledEl.checked,
         tabHotkey: tabHotkeyEl.checked,
+        camouflageMode: camouflageModeEl.checked,
         theme: themeEl.value,
         responseStyle: responseStyleEl.value,
         panelPosition: panelPositionEl.value,

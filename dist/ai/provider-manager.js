@@ -19,7 +19,8 @@ var DEFAULT_SETTINGS = {
   panelOpacity: 80,
   panelPosition: "left",
   // "left" | "right"
-  tabHotkey: true
+  tabHotkey: true,
+  camouflageMode: false
 };
 
 // src/shared/storage.ts

@@ -68,11 +68,99 @@ async function triggerAI(selectedText: string, settings: ExtensionSettings) {
   );
 }
 
+function parseRgb(colorStr: string): { r: number; g: number; b: number; a: number } | null {
+  if (!colorStr || colorStr === "transparent") return null;
+  const match = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+  if (match) {
+    return {
+      r: parseInt(match[1], 10),
+      g: parseInt(match[2], 10),
+      b: parseInt(match[3], 10),
+      a: match[4] !== undefined ? parseFloat(match[4]) : 1
+    };
+  }
+  return null;
+}
+
+function detectBackgroundColor(x: number, y: number): { r: number; g: number; b: number } {
+  let el: Element | null = null;
+  try {
+    el = document.elementFromPoint(x, y);
+  } catch {}
+
+  if (!el) el = document.body || document.documentElement;
+
+  while (el && el !== document.documentElement) {
+    const bg = window.getComputedStyle(el).backgroundColor;
+    const parsed = parseRgb(bg);
+    if (parsed && parsed.a > 0.05) {
+      return { r: parsed.r, g: parsed.g, b: parsed.b };
+    }
+    el = el.parentElement;
+  }
+
+  if (document.documentElement) {
+    const bg = window.getComputedStyle(document.documentElement).backgroundColor;
+    const parsed = parseRgb(bg);
+    if (parsed && parsed.a > 0.05) {
+      return { r: parsed.r, g: parsed.g, b: parsed.b };
+    }
+  }
+
+  // Fallback to white if everywhere transparent
+  return { r: 255, g: 255, b: 255 };
+}
+
+function getCamouflageStyle(bg: { r: number; g: number; b: number }): { color: string; textShadow: string } {
+  const lum = 0.299 * bg.r + 0.587 * bg.g + 0.114 * bg.b;
+
+  let textR: number;
+  let textG: number;
+  let textB: number;
+
+  if (lum > 210) {
+    // Very light or white background: slightly darker/off-white tone so it is barely visible
+    textR = Math.max(0, Math.round(bg.r - 35));
+    textG = Math.max(0, Math.round(bg.g - 35));
+    textB = Math.max(0, Math.round(bg.b - 35));
+  } else {
+    // Dark or mid-tone background: a slightly lighter tone of the same background color
+    textR = Math.min(255, Math.round(bg.r + (255 - bg.r) * 0.14 + 30));
+    textG = Math.min(255, Math.round(bg.g + (255 - bg.g) * 0.14 + 30));
+    textB = Math.min(255, Math.round(bg.b + (255 - bg.b) * 0.14 + 30));
+  }
+
+  return {
+    color: `rgb(${textR}, ${textG}, ${textB})`,
+    textShadow: "none"
+  };
+}
+
 function showPanel(content: string, debug?: any, settings?: ExtensionSettings) {
   const fontSize = settings?.fontSize ?? 13;
   const rawOpacity = settings?.panelOpacity ?? 80;
   const opacity = Math.min(Math.max(rawOpacity, 10), 100) / 100;
   const position = settings?.panelPosition ?? "left";
+  const camouflage = settings?.camouflageMode ?? false;
+
+  // Determine styling based on camouflage mode
+  let textColor = "#ffffff";
+  let textShadow = `
+    -1px -1px 1px rgba(0,0,0,0.9),
+     1px -1px 1px rgba(0,0,0,0.9),
+    -1px  1px 1px rgba(0,0,0,0.9),
+     1px  1px 1px rgba(0,0,0,0.9),
+     0px  2px 4px rgba(0,0,0,0.95)
+  `;
+
+  if (camouflage) {
+    const testX = position === "right" ? Math.max(window.innerWidth - 100, 20) : 40;
+    const testY = Math.round(window.innerHeight * 0.2);
+    const bg = detectBackgroundColor(testX, testY);
+    const camStyle = getCamouflageStyle(bg);
+    textColor = camStyle.color;
+    textShadow = camStyle.textShadow;
+  }
 
   // Create panel if not already present
   if (!panel) {
@@ -121,14 +209,9 @@ function showPanel(content: string, debug?: any, settings?: ExtensionSettings) {
       font-size: ${fontSize}px;
       line-height: 1.5;
       font-weight: 500;
-      color: #ffffff;
+      color: ${textColor};
       opacity: ${opacity};
-      text-shadow:
-        -1px -1px 1px rgba(0,0,0,0.9),
-         1px -1px 1px rgba(0,0,0,0.9),
-        -1px  1px 1px rgba(0,0,0,0.9),
-         1px  1px 1px rgba(0,0,0,0.9),
-         0px  2px 4px rgba(0,0,0,0.95);
+      text-shadow: ${textShadow};
       white-space: pre-wrap;
       word-break: break-word;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -143,7 +226,6 @@ function showPanel(content: string, debug?: any, settings?: ExtensionSettings) {
     let initialTop = 0;
 
     panel.onmousedown = (e) => {
-      // Allow selecting text with left click drag if not quick mouse down
       if (e.target !== contentDiv && e.target !== panel) return;
       isDragging = true;
       startX = e.clientX;
@@ -161,7 +243,6 @@ function showPanel(content: string, debug?: any, settings?: ExtensionSettings) {
       if (!isDragging || !panel) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
-      // Only drag if moved more than 4 pixels (distinguishes text selection from drag)
       if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
         document.body.style.userSelect = "none";
         const newLeft = Math.max(0, Math.min(window.innerWidth - panel.offsetWidth, initialLeft + dx));
@@ -185,6 +266,8 @@ function showPanel(content: string, debug?: any, settings?: ExtensionSettings) {
   const contentDiv = panel.querySelector<HTMLDivElement>("#browsemind-panel-content")!;
   contentDiv.style.fontSize = `${fontSize}px`;
   contentDiv.style.opacity = `${opacity}`;
+  contentDiv.style.color = textColor;
+  contentDiv.style.textShadow = textShadow;
   contentDiv.textContent = content;
 }
 

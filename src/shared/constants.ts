@@ -14,7 +14,8 @@ export const SETTINGS_KEYS = {
   FONT_SIZE: "fontSize",
   PANEL_OPACITY: "panelOpacity",
   PANEL_POSITION: "panelPosition",
-  TAB_HOTKEY: "tabHotkey"
+  TAB_HOTKEY: "tabHotkey",
+  CAMOUFLAGE_MODE: "camouflageMode"
 } as const;
 
 export const DEFAULT_SETTINGS = {
@@ -33,5 +34,6 @@ export const DEFAULT_SETTINGS = {
   fontSize: 13,
   panelOpacity: 80,
   panelPosition: "left", // "left" | "right"
-  tabHotkey: true
+  tabHotkey: true,
+  camouflageMode: false
 } as const;

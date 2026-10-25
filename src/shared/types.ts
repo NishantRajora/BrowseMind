@@ -15,6 +15,7 @@ export interface ExtensionSettings {
   panelOpacity?: number;
   panelPosition?: "left" | "right";
   tabHotkey?: boolean;
+  camouflageMode?: boolean;
 }
 
 export interface OllamaConfig {
