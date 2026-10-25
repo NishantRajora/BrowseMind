@@ -16,8 +16,28 @@ export function buildPrompt(selection: string, pageContent: string, settings: Ex
     : "";
 
   if (selection && selection.trim().length > 0) {
-    return `${styleInstr}\n\nSelected text / Question:\n"""${selection.trim()}"""\n${pageSnippet}`;
+    return `${styleInstr}
+
+IMPORTANT MULTIPLE QUESTIONS RESOLUTION:
+- The user selected ONE specific question or problem below.
+- FOCUS 100% EXCLUSIVELY on answering THIS EXACT SELECTED QUESTION.
+- Do NOT answer or get confused by any other questions that appear elsewhere on the page.
+- If it is a multiple-choice question, immediately state the correct option letter and answer, followed by brief key points.
+
+Selected text / Question:
+"""${selection.trim()}"""
+${pageSnippet}`;
   } else {
-    return `${styleInstr}\n\nAnalyze the page context and extract the key points and summary:\n${pageSnippet}`;
+    return `${styleInstr}
+
+IMPORTANT MULTIPLE QUESTIONS RESOLUTION:
+- If the page contains multiple questions or problems:
+  1. DO NOT get confused by multiple questions.
+  2. Answer each question individually in order (e.g., "1. [Direct Answer / Option]", "2. [Direct Answer / Option]").
+  3. For multiple-choice questions, clearly specify the correct option letter and text.
+  4. Keep every answer strictly concise in key points with zero conversational filler.
+
+Analyze the page context and extract the key points and summary:
+${pageSnippet}`;
   }
 }

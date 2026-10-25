@@ -64,7 +64,13 @@ async function extractPageContent() {
       el.remove();
     }
   });
-  let text = (clone.textContent || "").trim().replace(/\s+/g, " ");
+  const blockTags = ["p", "div", "li", "h1", "h2", "h3", "h4", "h5", "h6", "tr", "br", "section", "article"];
+  blockTags.forEach((tag) => {
+    clone.querySelectorAll(tag).forEach((el) => {
+      el.prepend(document.createTextNode("\n"));
+    });
+  });
+  let text = (clone.textContent || "").replace(/[ \t\r]+/g, " ").replace(/\n\s*\n+/g, "\n\n").trim();
   if (text.length > maxChars) {
     text = text.slice(0, maxChars);
   }
@@ -92,11 +98,11 @@ function createAskButton(rect) {
     background: "rgba(0, 122, 255, 0.85)",
     backdropFilter: "blur(4px)",
     color: "#fff",
-    padding: "4px 8px",
+    padding: "3px 7px",
     borderRadius: "4px",
     cursor: "pointer",
     zIndex: "2147483647",
-    fontSize: "12px",
+    fontSize: "11px",
     boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
     userSelect: "none"
   });
@@ -111,15 +117,15 @@ function createAskButton(rect) {
   });
 }
 async function triggerAI(selectedText, settings) {
-  showPanel("\u23F3 Fetching key points...", void 0, settings);
+  showPanel("\u2022 \u2022 \u2022", void 0, settings);
   const pageContent = await extractPageContent();
   chrome.runtime.sendMessage(
     { type: "ASK_AI", selection: selectedText, pageContent },
     (response) => {
       if (response?.error) {
-        showPanel(`\u274C Error: ${response.error}`, void 0, settings);
+        showPanel(`\u274C ${response.error}`, void 0, settings);
       } else {
-        showPanel(response?.answer ?? "No answer received.", response?.debug, settings);
+        showPanel(response?.answer ?? "", response?.debug, settings);
       }
     }
   );
@@ -134,106 +140,64 @@ function showPanel(content, debug, settings) {
     panel.id = "browsemind-panel";
     Object.assign(panel.style, {
       position: "fixed",
-      top: "15%",
-      width: "360px",
+      top: "14%",
+      width: "380px",
       maxWidth: "calc(100vw - 40px)",
-      maxHeight: "75vh",
-      background: `rgba(18, 22, 28, ${opacity})`,
-      backdropFilter: "blur(12px)",
-      WebkitBackdropFilter: "blur(12px)",
-      color: "rgba(255, 255, 255, 0.95)",
-      textShadow: "0 1px 3px rgba(0, 0, 0, 0.8)",
-      border: "1px solid rgba(255, 255, 255, 0.18)",
-      borderRadius: "10px",
-      boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
+      maxHeight: "82vh",
+      background: "transparent",
+      backgroundColor: "transparent",
+      border: "none",
+      outline: "none",
+      boxShadow: "none",
+      backdropFilter: "none",
+      WebkitBackdropFilter: "none",
       zIndex: "2147483647",
-      display: "flex",
-      flexDirection: "column",
-      overflow: "hidden",
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      display: "block",
+      overflowY: "auto",
+      cursor: "grab",
+      userSelect: "text",
+      scrollbarWidth: "none"
     });
     if (position === "right") {
-      panel.style.right = "20px";
+      panel.style.right = "24px";
       panel.style.left = "auto";
     } else {
-      panel.style.left = "20px";
+      panel.style.left = "24px";
       panel.style.right = "auto";
     }
-    const header = document.createElement("div");
-    header.id = "browsemind-panel-header";
-    header.style.cssText = `
-      padding: 6px 10px;
-      background: rgba(255, 255, 255, 0.08);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      cursor: move;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      user-select: none;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: rgba(255, 255, 255, 0.7);
-    `;
-    const title = document.createElement("span");
-    title.textContent = "BrowseMind \u2022 Key Points";
-    title.style.fontWeight = "600";
-    const controls = document.createElement("div");
-    controls.style.display = "flex";
-    controls.style.alignItems = "center";
-    controls.style.gap = "8px";
-    const escHint = document.createElement("span");
-    escHint.textContent = "Esc to close";
-    escHint.style.cssText = "font-size: 10px; opacity: 0.6; text-transform: none;";
-    const closeBtn = document.createElement("button");
-    closeBtn.textContent = "\u2715";
-    closeBtn.style.cssText = `
-      background: none;
-      border: none;
-      color: rgba(255, 255, 255, 0.8);
-      cursor: pointer;
-      font-size: 13px;
-      padding: 0 4px;
-      line-height: 1;
-    `;
-    closeBtn.onclick = () => {
+    panel.addEventListener("dblclick", () => {
       panel?.remove();
       panel = null;
-    };
-    controls.appendChild(escHint);
-    controls.appendChild(closeBtn);
-    header.appendChild(title);
-    header.appendChild(controls);
-    panel.appendChild(header);
+    });
     const contentDiv2 = document.createElement("div");
     contentDiv2.id = "browsemind-panel-content";
     contentDiv2.style.cssText = `
-      padding: 12px 14px;
-      overflow-y: auto;
-      flex: 1;
+      padding: 0;
+      margin: 0;
       font-size: ${fontSize}px;
-      line-height: 1.55;
+      line-height: 1.5;
+      font-weight: 500;
+      color: #ffffff;
+      opacity: ${opacity};
+      text-shadow:
+        -1px -1px 1px rgba(0,0,0,0.9),
+         1px -1px 1px rgba(0,0,0,0.9),
+        -1px  1px 1px rgba(0,0,0,0.9),
+         1px  1px 1px rgba(0,0,0,0.9),
+         0px  2px 4px rgba(0,0,0,0.95);
       white-space: pre-wrap;
       word-break: break-word;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     `;
     panel.appendChild(contentDiv2);
-    const debugContainer2 = document.createElement("div");
-    debugContainer2.id = "browsemind-debug";
-    debugContainer2.style.cssText = "padding: 6px; background: rgba(0,0,0,0.5); color: #ccc; font-size: 11px; max-height: 140px; overflow: auto; display: none; border-top: 1px solid rgba(255,255,255,0.1);";
-    const clearBtn = document.createElement("button");
-    clearBtn.textContent = "Clear Logs";
-    clearBtn.style.cssText = "margin: 2px; font-size: 11px; padding: 2px 6px;";
-    clearBtn.onclick = () => {
-      debugContainer2.innerHTML = "";
-    };
-    debugContainer2.appendChild(clearBtn);
-    panel.appendChild(debugContainer2);
     let isDragging = false;
     let startX = 0;
     let startY = 0;
     let initialLeft = 0;
     let initialTop = 0;
-    header.onmousedown = (e) => {
+    panel.onmousedown = (e) => {
+      if (e.target !== contentDiv2 && e.target !== panel)
+        return;
       isDragging = true;
       startX = e.clientX;
       startY = e.clientY;
@@ -243,45 +207,35 @@ function showPanel(content, debug, settings) {
       panel.style.right = "auto";
       panel.style.left = `${initialLeft}px`;
       panel.style.top = `${initialTop}px`;
-      document.body.style.userSelect = "none";
+      panel.style.cursor = "grabbing";
     };
     document.addEventListener("mousemove", (e) => {
       if (!isDragging || !panel)
         return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
-      const newLeft = Math.max(0, Math.min(window.innerWidth - panel.offsetWidth, initialLeft + dx));
-      const newTop = Math.max(0, Math.min(window.innerHeight - 40, initialTop + dy));
-      panel.style.left = `${newLeft}px`;
-      panel.style.top = `${newTop}px`;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+        document.body.style.userSelect = "none";
+        const newLeft = Math.max(0, Math.min(window.innerWidth - panel.offsetWidth, initialLeft + dx));
+        const newTop = Math.max(0, Math.min(window.innerHeight - 40, initialTop + dy));
+        panel.style.left = `${newLeft}px`;
+        panel.style.top = `${newTop}px`;
+      }
     });
     document.addEventListener("mouseup", () => {
       if (isDragging) {
         isDragging = false;
         document.body.style.userSelect = "";
+        if (panel)
+          panel.style.cursor = "grab";
       }
     });
     document.body.appendChild(panel);
-  } else {
-    panel.style.background = `rgba(18, 22, 28, ${opacity})`;
   }
   const contentDiv = panel.querySelector("#browsemind-panel-content");
   contentDiv.style.fontSize = `${fontSize}px`;
+  contentDiv.style.opacity = `${opacity}`;
   contentDiv.textContent = content;
-  const debugContainer = panel.querySelector("#browsemind-debug");
-  if (debug && debugContainer) {
-    debugContainer.style.display = "block";
-    const clearBtn = debugContainer.querySelector("button");
-    if (clearBtn) {
-      debugContainer.innerHTML = "";
-      debugContainer.appendChild(clearBtn);
-    }
-    const pre = document.createElement("pre");
-    pre.textContent = JSON.stringify(debug, null, 2);
-    debugContainer.appendChild(pre);
-  } else if (debugContainer) {
-    debugContainer.style.display = "none";
-  }
 }
 document.addEventListener("keydown", async (e) => {
   if (e.key === "Escape") {
@@ -313,9 +267,9 @@ chrome.runtime.onMessage.addListener(async (msg) => {
   if (msg.type === "SHOW_ANSWER") {
     const settings = await getSettings();
     if (msg.error) {
-      showPanel(`\u274C Error: ${msg.error}`, void 0, settings);
+      showPanel(`\u274C ${msg.error}`, void 0, settings);
     } else {
-      showPanel(msg.answer ?? "No answer", msg.debug, settings);
+      showPanel(msg.answer ?? "", msg.debug, settings);
     }
   }
 });

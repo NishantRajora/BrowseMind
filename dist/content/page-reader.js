@@ -64,7 +64,13 @@ async function extractPageContent() {
       el.remove();
     }
   });
-  let text = (clone.textContent || "").trim().replace(/\s+/g, " ");
+  const blockTags = ["p", "div", "li", "h1", "h2", "h3", "h4", "h5", "h6", "tr", "br", "section", "article"];
+  blockTags.forEach((tag) => {
+    clone.querySelectorAll(tag).forEach((el) => {
+      el.prepend(document.createTextNode("\n"));
+    });
+  });
+  let text = (clone.textContent || "").replace(/[ \t\r]+/g, " ").replace(/\n\s*\n+/g, "\n\n").trim();
   if (text.length > maxChars) {
     text = text.slice(0, maxChars);
   }
