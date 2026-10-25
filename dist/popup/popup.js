@@ -3,17 +3,23 @@ var DEFAULT_SETTINGS = {
   enabled: true,
   provider: "ollama",
   // "ollama" | "api"
-  ollamaUrl: "http://localhost:11434",
-  ollamaModel: "gpt-oss:120b",
-  apiUrl: "",
+  ollamaUrl: "https://ollama.com",
+  ollamaModel: "gemma4:31b",
+  ollamaApiKey: "",
+  apiUrl: "https://ollama.com/v1",
   apiKey: "",
-  apiModel: "",
+  apiModel: "gemma4:31b",
   theme: "system",
   // "system" | "light" | "dark"
-  responseStyle: "normal",
-  // "concise" | "normal" | "detailed"
+  responseStyle: "keypoints",
+  // "keypoints" | "concise" | "normal" | "detailed"
   maxText: 3e4,
-  debugMode: false
+  debugMode: false,
+  fontSize: 13,
+  panelOpacity: 80,
+  panelPosition: "left",
+  // "left" | "right"
+  tabHotkey: true
 };
 
 // src/shared/storage.ts
@@ -33,13 +39,19 @@ async function setSettings(partial) {
 // src/popup/popup.ts
 document.addEventListener("DOMContentLoaded", async () => {
   const enabledEl = document.getElementById("enabled");
+  const tabHotkeyEl = document.getElementById("tabHotkey");
   const themeEl = document.getElementById("theme");
   const responseStyleEl = document.getElementById("responseStyle");
+  const panelPositionEl = document.getElementById("panelPosition");
+  const fontSizeEl = document.getElementById("fontSize");
+  const panelOpacityEl = document.getElementById("panelOpacity");
+  const opacityValEl = document.getElementById("opacityVal");
   const debugModeEl = document.getElementById("debugMode");
   const providerSelectEl = document.getElementById("providerSelect");
   const ollamaDiv = document.getElementById("ollamaSettings");
   const apiDiv = document.getElementById("apiSettings");
   const ollamaUrlEl = document.getElementById("ollamaUrl");
+  const ollamaApiKeyEl = document.getElementById("ollamaApiKey");
   const ollamaModelSelect = document.getElementById("ollamaModel");
   const apiUrlEl = document.getElementById("apiUrl");
   const apiKeyEl = document.getElementById("apiKey");
@@ -49,11 +61,30 @@ document.addEventListener("DOMContentLoaded", async () => {
   const testResultDiv = document.getElementById("testResult");
   const settings = await getSettings();
   enabledEl.checked = settings.enabled;
+  tabHotkeyEl.checked = settings.tabHotkey ?? true;
   themeEl.value = settings.theme;
   responseStyleEl.value = settings.responseStyle;
+  panelPositionEl.value = settings.panelPosition ?? "left";
+  fontSizeEl.value = String(settings.fontSize ?? 13);
+  const curOpacity = settings.panelOpacity ?? 80;
+  panelOpacityEl.value = String(curOpacity);
+  if (opacityValEl)
+    opacityValEl.textContent = `${curOpacity}%`;
   debugModeEl.checked = settings.debugMode;
   providerSelectEl.value = settings.provider;
   ollamaUrlEl.value = settings.ollamaUrl;
+  ollamaApiKeyEl.value = settings.ollamaApiKey || "";
+  panelOpacityEl.addEventListener("input", () => {
+    if (opacityValEl)
+      opacityValEl.textContent = `${panelOpacityEl.value}%`;
+  });
+  if (settings.ollamaModel) {
+    const opt = document.createElement("option");
+    opt.value = settings.ollamaModel;
+    opt.textContent = settings.ollamaModel;
+    opt.selected = true;
+    ollamaModelSelect.appendChild(opt);
+  }
   ollamaModelSelect.value = settings.ollamaModel;
   apiUrlEl.value = settings.apiUrl;
   apiKeyEl.value = settings.apiKey;
@@ -71,11 +102,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   updateProviderUI();
   const inputs = [
     enabledEl,
+    tabHotkeyEl,
     themeEl,
     responseStyleEl,
+    panelPositionEl,
+    fontSizeEl,
+    panelOpacityEl,
     debugModeEl,
     providerSelectEl,
     ollamaUrlEl,
+    ollamaApiKeyEl,
     ollamaModelSelect,
     apiUrlEl,
     apiKeyEl,
@@ -85,14 +121,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     el.addEventListener("change", async () => {
       const newSettings = {
         enabled: enabledEl.checked,
+        tabHotkey: tabHotkeyEl.checked,
         theme: themeEl.value,
         responseStyle: responseStyleEl.value,
+        panelPosition: panelPositionEl.value,
+        fontSize: parseInt(fontSizeEl.value, 10) || 13,
+        panelOpacity: parseInt(panelOpacityEl.value, 10) || 80,
         debugMode: debugModeEl.checked,
         provider: providerSelectEl.value,
         ollamaUrl: ollamaUrlEl.value.trim(),
+        ollamaApiKey: ollamaApiKeyEl.value.trim(),
         ollamaModel: ollamaModelSelect.value,
         apiUrl: apiUrlEl.value.trim(),
-        apiKey: apiKeyEl.value,
+        apiKey: apiKeyEl.value.trim(),
         apiModel: apiModelEl.value.trim()
       };
       await setSettings(newSettings);
@@ -100,22 +141,48 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
   async function refreshModels() {
     const url = ollamaUrlEl.value.trim() || "http://localhost:11434";
-    try {
-      const resp = await fetch(`${url.replace(/\\+$/, "")}/api/tags`);
-      if (!resp.ok)
-        throw new Error(`Status ${resp.status}`);
-      const data = await resp.json();
-      const models = (data.models || []).map((m) => m.name);
-      ollamaModelSelect.innerHTML = "";
-      models.forEach((m) => {
-        const opt = document.createElement("option");
-        opt.value = m;
-        opt.textContent = m;
-        ollamaModelSelect.appendChild(opt);
-      });
-    } catch (e) {
-      testResultDiv.textContent = `Error: ${e.message}`;
+    const apiKey = ollamaApiKeyEl.value.trim();
+    testResultDiv.textContent = "Fetching models...";
+    testResultDiv.style.color = "inherit";
+    const resp = await new Promise((resolve) => {
+      chrome.runtime.sendMessage(
+        { type: "GET_OLLAMA_MODELS", url, apiKey },
+        resolve
+      );
+    });
+    if (resp?.error) {
+      testResultDiv.textContent = `\u274C Model fetch error: ${resp.error}`;
+      testResultDiv.style.color = "red";
+      return;
     }
+    const currentModel = ollamaModelSelect.value || settings.ollamaModel;
+    const models = (resp?.models || []).map((m) => m.name);
+    ollamaModelSelect.innerHTML = "";
+    if (models.length === 0) {
+      if (currentModel) {
+        const opt = document.createElement("option");
+        opt.value = currentModel;
+        opt.textContent = currentModel;
+        ollamaModelSelect.appendChild(opt);
+      }
+      testResultDiv.textContent = "\u26A0\uFE0F No models found on server.";
+      testResultDiv.style.color = "orange";
+      return;
+    }
+    models.forEach((m) => {
+      const opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = m;
+      ollamaModelSelect.appendChild(opt);
+    });
+    if (currentModel && models.includes(currentModel)) {
+      ollamaModelSelect.value = currentModel;
+    } else if (models.length > 0) {
+      ollamaModelSelect.value = models[0];
+    }
+    await setSettings({ ollamaModel: ollamaModelSelect.value });
+    testResultDiv.textContent = `\u2705 Loaded ${models.length} model(s)`;
+    testResultDiv.style.color = "green";
   }
   refreshBtn.addEventListener("click", (e) => {
     e.preventDefault();

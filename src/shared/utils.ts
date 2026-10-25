@@ -1,4 +1,4 @@
-export function sanitizeObject(obj: any, keysToMask: string[] = ["apiKey", "Authorization", "authorization"]): any {
+export function sanitizeObject(obj: any, keysToMask: string[] = ["apiKey", "ollamaApiKey", "Authorization", "authorization"]): any {
   if (obj === null || typeof obj !== "object") return obj;
   if (Array.isArray(obj)) return obj.map((v) => sanitizeObject(v, keysToMask));
   const sanitized: any = {};

@@ -3,18 +3,24 @@ export interface ExtensionSettings {
   provider: "ollama" | "api";
   ollamaUrl: string;
   ollamaModel: string;
+  ollamaApiKey?: string;
   apiUrl: string;
   apiKey: string;
   apiModel: string;
   theme: "system" | "light" | "dark";
-  responseStyle: "concise" | "normal" | "detailed";
+  responseStyle: "keypoints" | "concise" | "normal" | "detailed";
   maxText: number;
   debugMode: boolean;
+  fontSize?: number;
+  panelOpacity?: number;
+  panelPosition?: "left" | "right";
+  tabHotkey?: boolean;
 }
 
 export interface OllamaConfig {
   url: string;
   model: string;
+  apiKey?: string;
 }
 
 export interface APIConfig {

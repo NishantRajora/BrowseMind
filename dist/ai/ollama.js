@@ -17,6 +17,16 @@ var OllamaProvider = class {
   constructor(config) {
     this.url = config.url.replace(/\/+$/, "");
     this.model = config.model;
+    this.apiKey = config.apiKey?.trim();
+  }
+  getHeaders() {
+    const headers = {
+      "Content-Type": "application/json"
+    };
+    if (this.apiKey) {
+      headers["Authorization"] = `Bearer ${this.apiKey}`;
+    }
+    return headers;
   }
   async generate(prompt, maxTokens) {
     const endpoint = `${this.url}/api/generate`;
@@ -27,13 +37,11 @@ var OllamaProvider = class {
     };
     if (maxTokens !== void 0)
       payload.num_predict = maxTokens;
-    const start = Date.now();
     const response = await fetchWithTimeout(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: this.getHeaders(),
       body: JSON.stringify(payload)
     });
-    const duration = Date.now() - start;
     if (!response.ok) {
       const txt = await response.text();
       throw new Error(`Ollama request failed ${response.status}: ${txt}`);
@@ -44,19 +52,23 @@ var OllamaProvider = class {
   }
   async testConnection() {
     const endpoint = `${this.url}/api/tags`;
-    const response = await fetchWithTimeout(endpoint);
+    const headers = {};
+    if (this.apiKey) {
+      headers["Authorization"] = `Bearer ${this.apiKey}`;
+    }
+    const response = await fetchWithTimeout(endpoint, { headers });
     if (!response.ok) {
-      throw new Error(`Failed to list models: ${response.status}`);
+      const txt = await response.text().catch(() => "");
+      throw new Error(`Failed to list models (${response.status}): ${txt}`);
     }
   }
   async testAI() {
-    try {
-      await this.testConnection();
-      const answer = await this.generate("Hello");
-      return !!answer && answer.length > 0;
-    } catch {
-      return false;
+    await this.testConnection();
+    const answer = await this.generate("Hello");
+    if (!answer) {
+      throw new Error("Received empty response from Ollama model");
     }
+    return true;
   }
 };
 export {

@@ -15,8 +15,12 @@ async function fetchWithTimeout(input, init = {}, timeoutMs = 15e3) {
 // src/ai/api-client.ts
 var APIProvider = class {
   constructor(config) {
-    this.baseUrl = config.baseUrl.replace(/\/+$/, "");
-    this.apiKey = config.apiKey;
+    let base = config.baseUrl.replace(/\/+$/, "");
+    if ((base.endsWith("ollama.com") || base.includes(":11434")) && !base.endsWith("/v1")) {
+      base = `${base}/v1`;
+    }
+    this.baseUrl = base;
+    this.apiKey = config.apiKey?.trim() ?? "";
     this.model = config.model;
   }
   async generate(prompt, maxTokens) {
@@ -27,16 +31,17 @@ var APIProvider = class {
     };
     if (maxTokens !== void 0)
       payload.max_tokens = maxTokens;
-    const start = Date.now();
+    const headers = {
+      "Content-Type": "application/json"
+    };
+    if (this.apiKey) {
+      headers["Authorization"] = `Bearer ${this.apiKey}`;
+    }
     const response = await fetchWithTimeout(endpoint, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${this.apiKey}`
-      },
+      headers,
       body: JSON.stringify(payload)
     });
-    const duration = Date.now() - start;
     if (!response.ok) {
       const txt = await response.text();
       throw new Error(`API request failed ${response.status}: ${txt}`);
@@ -46,16 +51,11 @@ var APIProvider = class {
     return answer;
   }
   async testConnection() {
-    await this.generate("ping");
+    await this.generate("ping", 5);
   }
   async testAI() {
-    try {
-      await this.testConnection();
-      const answer = await this.generate("Hello");
-      return !!answer && answer.length > 0;
-    } catch {
-      return false;
-    }
+    await this.testConnection();
+    return true;
   }
 };
 export {

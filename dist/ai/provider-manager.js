@@ -3,17 +3,23 @@ var DEFAULT_SETTINGS = {
   enabled: true,
   provider: "ollama",
   // "ollama" | "api"
-  ollamaUrl: "http://localhost:11434",
-  ollamaModel: "gpt-oss:120b",
-  apiUrl: "",
+  ollamaUrl: "https://ollama.com",
+  ollamaModel: "gemma4:31b",
+  ollamaApiKey: "",
+  apiUrl: "https://ollama.com/v1",
   apiKey: "",
-  apiModel: "",
+  apiModel: "gemma4:31b",
   theme: "system",
   // "system" | "light" | "dark"
-  responseStyle: "normal",
-  // "concise" | "normal" | "detailed"
+  responseStyle: "keypoints",
+  // "keypoints" | "concise" | "normal" | "detailed"
   maxText: 3e4,
-  debugMode: false
+  debugMode: false,
+  fontSize: 13,
+  panelOpacity: 80,
+  panelPosition: "left",
+  // "left" | "right"
+  tabHotkey: true
 };
 
 // src/shared/storage.ts
@@ -44,6 +50,16 @@ var OllamaProvider = class {
   constructor(config) {
     this.url = config.url.replace(/\/+$/, "");
     this.model = config.model;
+    this.apiKey = config.apiKey?.trim();
+  }
+  getHeaders() {
+    const headers = {
+      "Content-Type": "application/json"
+    };
+    if (this.apiKey) {
+      headers["Authorization"] = `Bearer ${this.apiKey}`;
+    }
+    return headers;
   }
   async generate(prompt, maxTokens) {
     const endpoint = `${this.url}/api/generate`;
@@ -54,13 +70,11 @@ var OllamaProvider = class {
     };
     if (maxTokens !== void 0)
       payload.num_predict = maxTokens;
-    const start = Date.now();
     const response = await fetchWithTimeout(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: this.getHeaders(),
       body: JSON.stringify(payload)
     });
-    const duration = Date.now() - start;
     if (!response.ok) {
       const txt = await response.text();
       throw new Error(`Ollama request failed ${response.status}: ${txt}`);
@@ -71,27 +85,35 @@ var OllamaProvider = class {
   }
   async testConnection() {
     const endpoint = `${this.url}/api/tags`;
-    const response = await fetchWithTimeout(endpoint);
+    const headers = {};
+    if (this.apiKey) {
+      headers["Authorization"] = `Bearer ${this.apiKey}`;
+    }
+    const response = await fetchWithTimeout(endpoint, { headers });
     if (!response.ok) {
-      throw new Error(`Failed to list models: ${response.status}`);
+      const txt = await response.text().catch(() => "");
+      throw new Error(`Failed to list models (${response.status}): ${txt}`);
     }
   }
   async testAI() {
-    try {
-      await this.testConnection();
-      const answer = await this.generate("Hello");
-      return !!answer && answer.length > 0;
-    } catch {
-      return false;
+    await this.testConnection();
+    const answer = await this.generate("Hello");
+    if (!answer) {
+      throw new Error("Received empty response from Ollama model");
     }
+    return true;
   }
 };
 
 // src/ai/api-client.ts
 var APIProvider = class {
   constructor(config) {
-    this.baseUrl = config.baseUrl.replace(/\/+$/, "");
-    this.apiKey = config.apiKey;
+    let base = config.baseUrl.replace(/\/+$/, "");
+    if ((base.endsWith("ollama.com") || base.includes(":11434")) && !base.endsWith("/v1")) {
+      base = `${base}/v1`;
+    }
+    this.baseUrl = base;
+    this.apiKey = config.apiKey?.trim() ?? "";
     this.model = config.model;
   }
   async generate(prompt, maxTokens) {
@@ -102,16 +124,17 @@ var APIProvider = class {
     };
     if (maxTokens !== void 0)
       payload.max_tokens = maxTokens;
-    const start = Date.now();
+    const headers = {
+      "Content-Type": "application/json"
+    };
+    if (this.apiKey) {
+      headers["Authorization"] = `Bearer ${this.apiKey}`;
+    }
     const response = await fetchWithTimeout(endpoint, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${this.apiKey}`
-      },
+      headers,
       body: JSON.stringify(payload)
     });
-    const duration = Date.now() - start;
     if (!response.ok) {
       const txt = await response.text();
       throw new Error(`API request failed ${response.status}: ${txt}`);
@@ -121,16 +144,11 @@ var APIProvider = class {
     return answer;
   }
   async testConnection() {
-    await this.generate("ping");
+    await this.generate("ping", 5);
   }
   async testAI() {
-    try {
-      await this.testConnection();
-      const answer = await this.generate("Hello");
-      return !!answer && answer.length > 0;
-    } catch {
-      return false;
-    }
+    await this.testConnection();
+    return true;
   }
 };
 
@@ -138,9 +156,17 @@ var APIProvider = class {
 async function getProvider() {
   const settings = await getSettings();
   if (settings.provider === "ollama") {
-    return new OllamaProvider({ url: settings.ollamaUrl, model: settings.ollamaModel });
+    return new OllamaProvider({
+      url: settings.ollamaUrl,
+      model: settings.ollamaModel,
+      apiKey: settings.ollamaApiKey
+    });
   } else {
-    return new APIProvider({ baseUrl: settings.apiUrl, apiKey: settings.apiKey, model: settings.apiModel });
+    return new APIProvider({
+      baseUrl: settings.apiUrl,
+      apiKey: settings.apiKey,
+      model: settings.apiModel
+    });
   }
 }
 export {

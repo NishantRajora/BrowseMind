@@ -3,25 +3,35 @@ export const SETTINGS_KEYS = {
   PROVIDER: "provider",
   OLLAMA_URL: "ollamaUrl",
   OLLAMA_MODEL: "ollamaModel",
+  OLLAMA_API_KEY: "ollamaApiKey",
   API_URL: "apiUrl",
   API_KEY: "apiKey",
   API_MODEL: "apiModel",
   THEME: "theme",
   RESPONSE_STYLE: "responseStyle",
   MAX_TEXT: "maxText",
-  DEBUG_MODE: "debugMode"
+  DEBUG_MODE: "debugMode",
+  FONT_SIZE: "fontSize",
+  PANEL_OPACITY: "panelOpacity",
+  PANEL_POSITION: "panelPosition",
+  TAB_HOTKEY: "tabHotkey"
 } as const;
 
 export const DEFAULT_SETTINGS = {
   enabled: true,
   provider: "ollama", // "ollama" | "api"
-  ollamaUrl: "http://localhost:11434",
-  ollamaModel: "gpt-oss:120b",
-  apiUrl: "",
+  ollamaUrl: "https://ollama.com",
+  ollamaModel: "gemma4:31b",
+  ollamaApiKey: "",
+  apiUrl: "https://ollama.com/v1",
   apiKey: "",
-  apiModel: "",
+  apiModel: "gemma4:31b",
   theme: "system", // "system" | "light" | "dark"
-  responseStyle: "normal", // "concise" | "normal" | "detailed"
+  responseStyle: "keypoints", // "keypoints" | "concise" | "normal" | "detailed"
   maxText: 30000,
-  debugMode: false
+  debugMode: false,
+  fontSize: 13,
+  panelOpacity: 80,
+  panelPosition: "left", // "left" | "right"
+  tabHotkey: true
 } as const;

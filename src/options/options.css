@@ -18,10 +18,23 @@ label {
   margin-bottom: 6px;
 }
 
-input[type="text"], input[type="url"], select, input[type="password"] {
+input[type="text"], input[type="url"], select, input[type="password"], input[type="number"] {
   width: 100%;
   padding: 4px;
   box-sizing: border-box;
+}
+
+input[type="range"] {
+  width: calc(100% - 50px);
+  vertical-align: middle;
+}
+
+#opacityVal {
+  display: inline-block;
+  width: 40px;
+  font-size: 12px;
+  text-align: right;
+  font-weight: bold;
 }
 
 button {

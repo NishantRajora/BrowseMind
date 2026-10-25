@@ -3,17 +3,23 @@ var DEFAULT_SETTINGS = {
   enabled: true,
   provider: "ollama",
   // "ollama" | "api"
-  ollamaUrl: "http://localhost:11434",
-  ollamaModel: "gpt-oss:120b",
-  apiUrl: "",
+  ollamaUrl: "https://ollama.com",
+  ollamaModel: "gemma4:31b",
+  ollamaApiKey: "",
+  apiUrl: "https://ollama.com/v1",
   apiKey: "",
-  apiModel: "",
+  apiModel: "gemma4:31b",
   theme: "system",
   // "system" | "light" | "dark"
-  responseStyle: "normal",
-  // "concise" | "normal" | "detailed"
+  responseStyle: "keypoints",
+  // "keypoints" | "concise" | "normal" | "detailed"
   maxText: 3e4,
-  debugMode: false
+  debugMode: false,
+  fontSize: 13,
+  panelOpacity: 80,
+  panelPosition: "left",
+  // "left" | "right"
+  tabHotkey: true
 };
 
 // src/shared/storage.ts

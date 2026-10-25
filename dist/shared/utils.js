@@ -1,5 +1,5 @@
 // src/shared/utils.ts
-function sanitizeObject(obj, keysToMask = ["apiKey", "Authorization", "authorization"]) {
+function sanitizeObject(obj, keysToMask = ["apiKey", "ollamaApiKey", "Authorization", "authorization"]) {
   if (obj === null || typeof obj !== "object")
     return obj;
   if (Array.isArray(obj))

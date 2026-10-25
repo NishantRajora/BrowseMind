@@ -57,9 +57,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (type === "GET_OLLAMA_MODELS") {
-    const url = message.url;
-    fetch(`${url.replace(/\\+$/, "")}/api/tags`)
-      .then((resp) => resp.json())
+    const url = (message.url || "http://localhost:11434").replace(/\/+$/, "");
+    const apiKey = message.apiKey;
+    const headers: Record<string, string> = {};
+    if (apiKey) {
+      headers["Authorization"] = `Bearer ${apiKey}`;
+    }
+    fetch(`${url}/api/tags`, { headers })
+      .then(async (resp) => {
+        if (!resp.ok) {
+          const txt = await resp.text().catch(() => "");
+          throw new Error(`Failed to list models (${resp.status}): ${txt}`);
+        }
+        return resp.json();
+      })
       .then((data) => sendResponse({ models: data.models || [] }))
       .catch((e) => sendResponse({ error: e.message }));
     return true;

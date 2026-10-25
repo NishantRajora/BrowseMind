@@ -1,0 +1,108 @@
+# ==========================================
+# BrowseMind Git Ignore
+# ==========================================
+
+# Environment variables & secrets (CRITICAL)
+# ==========================================
+# BrowseMind Git Ignore
+# ==========================================
+
+# Environment variables & secrets (CRITICAL)
+.env
+.env.local
+.env.*.local
+*.env
+*.pem
+*.key
+*.cert
+*.p12
+
+# Extension build packages
+*.crx
+*.zip
+
+# Operating System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini
+
+# Logs & Debugging
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Test coverage & tooling
+coverage/
+.nyc_output/
+
+# Python & Jupyter Notebook checkpoints
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.pytest_cache/
+
+# IDE & Editor folders (optional local workspace)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.sublime-workspace
+*.sw?
+.env.local
+.env.*.local
+*.env
+*.pem
+*.key
+*.cert
+*.p12
+
+# Extension build packages
+*.crx
+*.zip
+
+# Operating System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini
+
+# Logs & Debugging
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Test coverage & tooling
+coverage/
+.nyc_output/
+
+# Python & Jupyter Notebook checkpoints
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.pytest_cache/
+
+# IDE & Editor folders (optional local workspace)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.sublime-workspace
+*.sw?
+

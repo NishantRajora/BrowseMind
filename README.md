@@ -5,8 +5,8 @@ BrowseMind is a Chromium/Brave **Manifest V3** extension that lets you select an
 ## Features
 - **ON/OFF toggle** in the popup.
 - **Ask AI** button appears near any user selection.
-- Two AI back‑ends: **Ollama** (local) and any **OpenAI‑compatible** API.
-- Settings page lets you configure provider URL, model, API key, theme, response style, and a **Debug console**.
+- Two AI back‑ends: **Ollama** (local or cloud/keyed with Bearer token) and any **OpenAI‑compatible** API.
+- Settings page lets you configure provider URL, model, API key (for Ollama Cloud / proxy or OpenAI compatible endpoints), theme, response style, and a **Debug console**.
 - Context‑menu integration (`right‑click → Ask AI`).
 - Theme‑aware UI (system / light / dark).
 - Storage in `chrome.storage.local` with sensible defaults.

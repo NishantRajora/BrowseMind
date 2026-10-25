@@ -3,17 +3,23 @@ var DEFAULT_SETTINGS = {
   enabled: true,
   provider: "ollama",
   // "ollama" | "api"
-  ollamaUrl: "http://localhost:11434",
-  ollamaModel: "gpt-oss:120b",
-  apiUrl: "",
+  ollamaUrl: "https://ollama.com",
+  ollamaModel: "gemma4:31b",
+  ollamaApiKey: "",
+  apiUrl: "https://ollama.com/v1",
   apiKey: "",
-  apiModel: "",
+  apiModel: "gemma4:31b",
   theme: "system",
   // "system" | "light" | "dark"
-  responseStyle: "normal",
-  // "concise" | "normal" | "detailed"
+  responseStyle: "keypoints",
+  // "keypoints" | "concise" | "normal" | "detailed"
   maxText: 3e4,
-  debugMode: false
+  debugMode: false,
+  fontSize: 13,
+  panelOpacity: 80,
+  panelPosition: "left",
+  // "left" | "right"
+  tabHotkey: true
 };
 
 // src/shared/storage.ts
@@ -78,19 +84,20 @@ function createAskButton(rect) {
   removeAskButton();
   askButton = document.createElement("div");
   askButton.id = "browsemind-ask-btn";
-  askButton.textContent = "Ask AI";
+  askButton.textContent = "Ask AI (Tab)";
   Object.assign(askButton.style, {
     position: "absolute",
     top: `${rect.bottom + window.scrollY + 4}px`,
     left: `${rect.left + window.scrollX}px`,
-    background: "#007aff",
+    background: "rgba(0, 122, 255, 0.85)",
+    backdropFilter: "blur(4px)",
     color: "#fff",
     padding: "4px 8px",
     borderRadius: "4px",
     cursor: "pointer",
     zIndex: "2147483647",
     fontSize: "12px",
-    boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+    boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
     userSelect: "none"
   });
   document.body.appendChild(askButton);
@@ -98,84 +105,144 @@ function createAskButton(rect) {
     e.stopPropagation();
     const sel = window.getSelection();
     const selectedText = sel?.toString().trim() ?? "";
-    if (!selectedText) {
-      removeAskButton();
-      return;
-    }
     removeAskButton();
-    const pageContent = await extractPageContent();
-    chrome.runtime.sendMessage(
-      { type: "ASK_AI", selection: selectedText, pageContent },
-      (response) => {
-        if (response?.error) {
-          showPanel(`\u274C Error: ${response.error}`);
-        } else {
-          showPanel(response?.answer ?? "No answer", response?.debug);
-        }
-      }
-    );
+    const settings = await getSettings();
+    await triggerAI(selectedText, settings);
   });
 }
-function showPanel(content, debug) {
+async function triggerAI(selectedText, settings) {
+  showPanel("\u23F3 Fetching key points...", void 0, settings);
+  const pageContent = await extractPageContent();
+  chrome.runtime.sendMessage(
+    { type: "ASK_AI", selection: selectedText, pageContent },
+    (response) => {
+      if (response?.error) {
+        showPanel(`\u274C Error: ${response.error}`, void 0, settings);
+      } else {
+        showPanel(response?.answer ?? "No answer received.", response?.debug, settings);
+      }
+    }
+  );
+}
+function showPanel(content, debug, settings) {
+  const fontSize = settings?.fontSize ?? 13;
+  const rawOpacity = settings?.panelOpacity ?? 80;
+  const opacity = Math.min(Math.max(rawOpacity, 10), 100) / 100;
+  const position = settings?.panelPosition ?? "left";
   if (!panel) {
     panel = document.createElement("div");
     panel.id = "browsemind-panel";
     Object.assign(panel.style, {
       position: "fixed",
-      bottom: "20px",
-      right: "20px",
+      top: "15%",
       width: "360px",
-      maxHeight: "50vh",
-      background: "#fff",
-      color: "#000",
-      border: "1px solid #ccc",
-      borderRadius: "8px",
-      boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+      maxWidth: "calc(100vw - 40px)",
+      maxHeight: "75vh",
+      background: `rgba(18, 22, 28, ${opacity})`,
+      backdropFilter: "blur(12px)",
+      WebkitBackdropFilter: "blur(12px)",
+      color: "rgba(255, 255, 255, 0.95)",
+      textShadow: "0 1px 3px rgba(0, 0, 0, 0.8)",
+      border: "1px solid rgba(255, 255, 255, 0.18)",
+      borderRadius: "10px",
+      boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
       zIndex: "2147483647",
       display: "flex",
       flexDirection: "column",
       overflow: "hidden",
-      fontFamily: "sans-serif"
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     });
+    if (position === "right") {
+      panel.style.right = "20px";
+      panel.style.left = "auto";
+    } else {
+      panel.style.left = "20px";
+      panel.style.right = "auto";
+    }
     const header = document.createElement("div");
     header.id = "browsemind-panel-header";
-    header.style.cssText = "padding:4px 8px;background:#007aff;color:#fff;cursor:move;display:flex;justify-content:space-between;align-items:center;";
+    header.style.cssText = `
+      padding: 6px 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      cursor: move;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: rgba(255, 255, 255, 0.7);
+    `;
     const title = document.createElement("span");
-    title.textContent = "BrowseMind";
+    title.textContent = "BrowseMind \u2022 Key Points";
+    title.style.fontWeight = "600";
+    const controls = document.createElement("div");
+    controls.style.display = "flex";
+    controls.style.alignItems = "center";
+    controls.style.gap = "8px";
+    const escHint = document.createElement("span");
+    escHint.textContent = "Esc to close";
+    escHint.style.cssText = "font-size: 10px; opacity: 0.6; text-transform: none;";
     const closeBtn = document.createElement("button");
     closeBtn.textContent = "\u2715";
-    closeBtn.style.cssText = "background:none;border:none;color:#fff;cursor:pointer;font-size:14px;";
+    closeBtn.style.cssText = `
+      background: none;
+      border: none;
+      color: rgba(255, 255, 255, 0.8);
+      cursor: pointer;
+      font-size: 13px;
+      padding: 0 4px;
+      line-height: 1;
+    `;
     closeBtn.onclick = () => {
       panel?.remove();
       panel = null;
     };
+    controls.appendChild(escHint);
+    controls.appendChild(closeBtn);
     header.appendChild(title);
-    header.appendChild(closeBtn);
+    header.appendChild(controls);
     panel.appendChild(header);
     const contentDiv2 = document.createElement("div");
     contentDiv2.id = "browsemind-panel-content";
-    contentDiv2.style.cssText = "padding:8px;overflow:auto;flex:1;";
+    contentDiv2.style.cssText = `
+      padding: 12px 14px;
+      overflow-y: auto;
+      flex: 1;
+      font-size: ${fontSize}px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+    `;
     panel.appendChild(contentDiv2);
     const debugContainer2 = document.createElement("div");
     debugContainer2.id = "browsemind-debug";
-    debugContainer2.style.cssText = "padding:4px;background:#f5f5f5;color:#333;font-size:12px;max-height:150px;overflow:auto;display:none;";
+    debugContainer2.style.cssText = "padding: 6px; background: rgba(0,0,0,0.5); color: #ccc; font-size: 11px; max-height: 140px; overflow: auto; display: none; border-top: 1px solid rgba(255,255,255,0.1);";
     const clearBtn = document.createElement("button");
     clearBtn.textContent = "Clear Logs";
-    clearBtn.style.cssText = "margin:4px;font-size:12px;";
+    clearBtn.style.cssText = "margin: 2px; font-size: 11px; padding: 2px 6px;";
     clearBtn.onclick = () => {
       debugContainer2.innerHTML = "";
     };
     debugContainer2.appendChild(clearBtn);
     panel.appendChild(debugContainer2);
     let isDragging = false;
-    let startX = 0, startY = 0, startRight = 0, startBottom = 0;
+    let startX = 0;
+    let startY = 0;
+    let initialLeft = 0;
+    let initialTop = 0;
     header.onmousedown = (e) => {
       isDragging = true;
       startX = e.clientX;
       startY = e.clientY;
       const rect = panel.getBoundingClientRect();
-      startRight = rect.right - rect.width;
-      startBottom = window.innerHeight - rect.bottom;
+      initialLeft = rect.left;
+      initialTop = rect.top;
+      panel.style.right = "auto";
+      panel.style.left = `${initialLeft}px`;
+      panel.style.top = `${initialTop}px`;
       document.body.style.userSelect = "none";
     };
     document.addEventListener("mousemove", (e) => {
@@ -183,10 +250,10 @@ function showPanel(content, debug) {
         return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
-      const newRight = Math.max(startRight + dx, 0);
-      const newBottom = Math.max(startBottom - dy, 0);
-      panel.style.right = `${newRight}px`;
-      panel.style.bottom = `${newBottom}px`;
+      const newLeft = Math.max(0, Math.min(window.innerWidth - panel.offsetWidth, initialLeft + dx));
+      const newTop = Math.max(0, Math.min(window.innerHeight - 40, initialTop + dy));
+      panel.style.left = `${newLeft}px`;
+      panel.style.top = `${newTop}px`;
     });
     document.addEventListener("mouseup", () => {
       if (isDragging) {
@@ -195,18 +262,19 @@ function showPanel(content, debug) {
       }
     });
     document.body.appendChild(panel);
+  } else {
+    panel.style.background = `rgba(18, 22, 28, ${opacity})`;
   }
   const contentDiv = panel.querySelector("#browsemind-panel-content");
+  contentDiv.style.fontSize = `${fontSize}px`;
   contentDiv.textContent = content;
   const debugContainer = panel.querySelector("#browsemind-debug");
   if (debug && debugContainer) {
     debugContainer.style.display = "block";
     const clearBtn = debugContainer.querySelector("button");
     if (clearBtn) {
-      const content2 = debugContainer.cloneNode(true);
-      const btn = content2.querySelector("button");
       debugContainer.innerHTML = "";
-      debugContainer.appendChild(btn);
+      debugContainer.appendChild(clearBtn);
     }
     const pre = document.createElement("pre");
     pre.textContent = JSON.stringify(debug, null, 2);
@@ -215,12 +283,39 @@ function showPanel(content, debug) {
     debugContainer.style.display = "none";
   }
 }
-chrome.runtime.onMessage.addListener((msg) => {
+document.addEventListener("keydown", async (e) => {
+  if (e.key === "Escape") {
+    if (panel) {
+      panel.remove();
+      panel = null;
+    }
+    removeAskButton();
+    return;
+  }
+  if (e.key === "Tab") {
+    const target = e.target;
+    const isEditable = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+    const sel = window.getSelection();
+    const selectedText = sel?.toString().trim() ?? "";
+    if (isEditable && !selectedText) {
+      return;
+    }
+    const settings = await getSettings();
+    if (!settings.enabled || settings.tabHotkey === false) {
+      return;
+    }
+    e.preventDefault();
+    removeAskButton();
+    await triggerAI(selectedText, settings);
+  }
+});
+chrome.runtime.onMessage.addListener(async (msg) => {
   if (msg.type === "SHOW_ANSWER") {
+    const settings = await getSettings();
     if (msg.error) {
-      showPanel(`\u274C Error: ${msg.error}`);
+      showPanel(`\u274C Error: ${msg.error}`, void 0, settings);
     } else {
-      showPanel(msg.answer ?? "No answer", msg.debug);
+      showPanel(msg.answer ?? "No answer", msg.debug, settings);
     }
   }
 });

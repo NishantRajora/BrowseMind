@@ -6,8 +6,16 @@ import { AIProvider } from "../shared/types";
 export async function getProvider(): Promise<AIProvider> {
   const settings = await getSettings();
   if (settings.provider === "ollama") {
-    return new OllamaProvider({ url: settings.ollamaUrl, model: settings.ollamaModel });
+    return new OllamaProvider({
+      url: settings.ollamaUrl,
+      model: settings.ollamaModel,
+      apiKey: settings.ollamaApiKey
+    });
   } else {
-    return new APIProvider({ baseUrl: settings.apiUrl, apiKey: settings.apiKey, model: settings.apiModel });
+    return new APIProvider({
+      baseUrl: settings.apiUrl,
+      apiKey: settings.apiKey,
+      model: settings.apiModel
+    });
   }
 }

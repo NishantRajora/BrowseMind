@@ -5,7 +5,8 @@
   "scripts": {
     "build": "npm run copy && esbuild src/**/*.ts --bundle --format=esm --outdir=dist --sourcemap",
     "copy": "cpx \"src/**/*.html\" dist && cpx \"src/**/*.css\" dist && cpx \"assets/**/*\" dist && cpx \"manifest.json\" dist",
-    "test": "jest"
+    "test": "jest",
+    "test:ai": "node test-env.js"
   },
   "devDependencies": {
     "esbuild": "^0.19.0",

@@ -7,8 +7,13 @@ export class APIProvider implements AIProvider {
   private model: string;
 
   constructor(config: APIConfig) {
-    this.baseUrl = config.baseUrl.replace(/\/+$/, "");
-    this.apiKey = config.apiKey;
+    let base = config.baseUrl.replace(/\/+$/, "");
+    // Automatically normalize Ollama host URLs to include /v1 for OpenAI compatibility
+    if ((base.endsWith("ollama.com") || base.includes(":11434")) && !base.endsWith("/v1")) {
+      base = `${base}/v1`;
+    }
+    this.baseUrl = base;
+    this.apiKey = config.apiKey?.trim() ?? "";
     this.model = config.model;
   }
 
@@ -19,16 +24,17 @@ export class APIProvider implements AIProvider {
       messages: [{ role: "user", content: prompt }]
     };
     if (maxTokens !== undefined) payload.max_tokens = maxTokens;
-    const start = Date.now();
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json"
+    };
+    if (this.apiKey) {
+      headers["Authorization"] = `Bearer ${this.apiKey}`;
+    }
     const response = await fetchWithTimeout(endpoint, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${this.apiKey}`
-      },
+      headers,
       body: JSON.stringify(payload)
     });
-    const duration = Date.now() - start;
     if (!response.ok) {
       const txt = await response.text();
       throw new Error(`API request failed ${response.status}: ${txt}`);
@@ -40,16 +46,11 @@ export class APIProvider implements AIProvider {
 
   async testConnection(): Promise<void> {
     // Use a cheap prompt to verify connectivity.
-    await this.generate("ping");
+    await this.generate("ping", 5);
   }
 
   async testAI(): Promise<boolean> {
-    try {
-      await this.testConnection();
-      const answer = await this.generate("Hello");
-      return !!answer && answer.length > 0;
-    } catch {
-      return false;
-    }
+    await this.testConnection();
+    return true;
   }
 }

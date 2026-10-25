@@ -4,10 +4,22 @@ import { fetchWithTimeout } from "../shared/utils";
 export class OllamaProvider implements AIProvider {
   private url: string;
   private model: string;
+  private apiKey?: string;
 
   constructor(config: OllamaConfig) {
-    this.url = config.url.replace(/\/+$/,""); // strip trailing slash
+    this.url = config.url.replace(/\/+$/, ""); // strip trailing slash
     this.model = config.model;
+    this.apiKey = config.apiKey?.trim();
+  }
+
+  private getHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json"
+    };
+    if (this.apiKey) {
+      headers["Authorization"] = `Bearer ${this.apiKey}`;
+    }
+    return headers;
   }
 
   async generate(prompt: string, maxTokens?: number): Promise<string> {
@@ -18,13 +30,11 @@ export class OllamaProvider implements AIProvider {
       stream: false
     };
     if (maxTokens !== undefined) payload.num_predict = maxTokens;
-    const start = Date.now();
     const response = await fetchWithTimeout(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: this.getHeaders(),
       body: JSON.stringify(payload)
     });
-    const duration = Date.now() - start; // currently unused but useful for debugging
     if (!response.ok) {
       const txt = await response.text();
       throw new Error(`Ollama request failed ${response.status}: ${txt}`);
@@ -36,20 +46,23 @@ export class OllamaProvider implements AIProvider {
 
   async testConnection(): Promise<void> {
     const endpoint = `${this.url}/api/tags`;
-    const response = await fetchWithTimeout(endpoint);
-    if (!response.ok) {
-      throw new Error(`Failed to list models: ${response.status}`);
+    const headers: Record<string, string> = {};
+    if (this.apiKey) {
+      headers["Authorization"] = `Bearer ${this.apiKey}`;
     }
-    // Successful if we get JSON back; no further validation needed
+    const response = await fetchWithTimeout(endpoint, { headers });
+    if (!response.ok) {
+      const txt = await response.text().catch(() => "");
+      throw new Error(`Failed to list models (${response.status}): ${txt}`);
+    }
   }
 
   async testAI(): Promise<boolean> {
-    try {
-      await this.testConnection();
-      const answer = await this.generate("Hello");
-      return !!answer && answer.length > 0;
-    } catch {
-      return false;
+    await this.testConnection();
+    const answer = await this.generate("Hello");
+    if (!answer) {
+      throw new Error("Received empty response from Ollama model");
     }
+    return true;
   }
 }

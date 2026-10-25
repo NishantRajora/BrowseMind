@@ -13,6 +13,10 @@
       Enabled
     </label>
     <label>
+      <input type="checkbox" id="tabHotkey" />
+      Tab Key Trigger (Press Tab with or without selection)
+    </label>
+    <label>
       Theme:
       <select id="theme">
         <option value="system">System</option>
@@ -23,10 +27,27 @@
     <label>
       Response style:
       <select id="responseStyle">
+        <option value="keypoints">Key Points Only (No Extra Text)</option>
         <option value="concise">Concise</option>
         <option value="normal">Normal</option>
         <option value="detailed">Detailed</option>
       </select>
+    </label>
+    <label>
+      Panel Position:
+      <select id="panelPosition">
+        <option value="left">Left Side (Stealth)</option>
+        <option value="right">Right Side</option>
+      </select>
+    </label>
+    <label>
+      Font Size (px):
+      <input type="number" id="fontSize" min="9" max="28" value="13" />
+    </label>
+    <label>
+      Transparency / Opacity:
+      <input type="range" id="panelOpacity" min="15" max="100" value="80" />
+      <span id="opacityVal">80%</span>
     </label>
     <label>
       Debug mode:
@@ -48,6 +69,10 @@
       <label>
         Ollama URL:
         <input type="url" id="ollamaUrl" placeholder="http://localhost:11434" />
+      </label>
+      <label>
+        API Key (optional):
+        <input type="password" id="ollamaApiKey" placeholder="Bearer token (e.g. Ollama Cloud or proxy)" />
       </label>
       <label>
         Model:
